@@ -232,7 +232,8 @@ namespace Microsoft.Xna.Framework.Graphics
 
             // Apply the state!
             var d3dContext = device._d3dContext;
-            d3dContext.OutputMerger.BlendFactor = new SharpDX.Color4(BlendFactor.R / 255.0f, BlendFactor.G / 255.0f, BlendFactor.B / 255.0f, BlendFactor.A / 255.0f);
+            var combinedBlendFactor = BlendFactor.ToVector4() * GraphicsDevice.BlendFactor.ToVector4();
+            d3dContext.OutputMerger.BlendFactor = new SharpDX.Color4(combinedBlendFactor.X, combinedBlendFactor.Y, combinedBlendFactor.Z, combinedBlendFactor.W);
             d3dContext.OutputMerger.BlendSampleMask = -1;
             d3dContext.OutputMerger.BlendState = _state;
         }

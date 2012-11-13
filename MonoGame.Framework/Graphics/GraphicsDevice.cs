@@ -89,6 +89,8 @@ namespace Microsoft.Xna.Framework.Graphics
         private DepthStencilState _depthStencilState = DepthStencilState.Default;
 		private RasterizerState _rasterizerState = RasterizerState.CullCounterClockwise;
 
+        private Color _blendFactor;
+
         private bool _blendStateDirty;
         private bool _depthStencilStateDirty;
         private bool _rasterizerStateDirty;
@@ -376,6 +378,7 @@ namespace Microsoft.Xna.Framework.Graphics
             BlendState = BlendState.Opaque;
             DepthStencilState = DepthStencilState.Default;
             RasterizerState = RasterizerState.CullCounterClockwise;
+            BlendFactor = Color.White;
 
             // Clear the texture and sampler collections forcing
             // the state to be reapplied.
@@ -713,6 +716,19 @@ namespace Microsoft.Xna.Framework.Graphics
             }
         }
 
+        public Color BlendFactor
+        {
+            get
+            {
+                return _blendFactor;
+            }
+            set
+            {
+                if (_blendFactor != value)
+                    _blendFactor = value;
+            }
+        }
+
         public BlendState BlendState 
         {
 			get { return _blendState; }
@@ -994,7 +1010,7 @@ namespace Microsoft.Xna.Framework.Graphics
 #if DIRECTX
             // The application may optionally specify "dirty" or "scroll" rects to improve efficiency
             // in certain scenarios.  In this sample, however, we do not utilize those features.
-            var parameters = new SharpDX.DXGI.PresentParameters();
+            //var parameters = new SharpDX.DXGI.PresentParameters();
             
             try
             {
@@ -1003,7 +1019,9 @@ namespace Microsoft.Xna.Framework.Graphics
                 // The first argument instructs DXGI to block until VSync, putting the application
                 // to sleep until the next VSync. This ensures we don't waste any cycles rendering
                 // frames that will never be displayed to the screen.
-                _swapChain.Present(1, SharpDX.DXGI.PresentFlags.None, parameters);
+                _swapChain.Present(1, SharpDX.DXGI.PresentFlags.None);
+
+                _d3dContext.DiscardView(_renderTargetView);
             }
             catch (SharpDX.SharpDXException)
             {
