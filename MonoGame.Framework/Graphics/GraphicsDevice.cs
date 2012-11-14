@@ -144,7 +144,7 @@ namespace Microsoft.Xna.Framework.Graphics
 
         // Core Direct3D Objects
         internal SharpDX.Direct3D11.Device _d3dDevice;
-        internal SharpDX.Direct3D11.DeviceContext _d3dContext;
+        internal SharpDX.Direct3D11.DeviceContext1 _d3dContext;
         protected FeatureLevel _featureLevel;
         protected SharpDX.Direct3D11.RenderTargetView _renderTargetView;
         protected SharpDX.Direct3D11.DepthStencilView _depthStencilView;
@@ -1115,7 +1115,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 // frames that will never be displayed to the screen.
                 lock (_d3dContext)
                 {
-                    _swapChain.Present(1, PresentFlags.None, parameters);
+                    _swapChain.Present(1, PresentFlags.None/*, parameters*/);
                     _d3dContext.DiscardView(_renderTargetView);
                 }
             }
