@@ -58,11 +58,7 @@ namespace Microsoft.Xna.Framework.Graphics
 #else
 			this.glTarget = TextureTarget.TextureCubeMap;
 
-#if IOS || ANDROID
-			GL.GenTextures(1, ref this.glTexture);
-#else
 			GL.GenTextures(1, out this.glTexture);
-#endif
             GraphicsExtensions.CheckGLError();
             GL.BindTexture(TextureTarget.TextureCubeMap, this.glTexture);
             GraphicsExtensions.CheckGLError();

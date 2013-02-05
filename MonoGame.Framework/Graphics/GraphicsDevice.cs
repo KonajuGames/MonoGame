@@ -326,16 +326,6 @@ namespace Microsoft.Xna.Framework.Graphics
 
             MaxTextureSlots = 16;
 #if OPENGL
-#if GLES
-            GL.GetInteger(All.MaxTextureImageUnits, ref MaxTextureSlots);
-            GraphicsExtensions.CheckGLError();
-
-            GL.GetInteger(All.MaxVertexAttribs, ref MaxVertexAttributes);
-            GraphicsExtensions.CheckGLError();
-
-            GL.GetInteger(All.MaxTextureSize, ref _maxTextureSize);
-            GraphicsExtensions.CheckGLError();
-#elif OPENGL
             GL.GetInteger(GetPName.MaxTextureImageUnits, out MaxTextureSlots);
             GraphicsExtensions.CheckGLError();
 
@@ -344,7 +334,7 @@ namespace Microsoft.Xna.Framework.Graphics
             
             GL.GetInteger(GetPName.MaxTextureSize, out _maxTextureSize);
             GraphicsExtensions.CheckGLError();
-#endif
+
             _extensions = GetGLExtensions();
 #endif // OPENGL
 
@@ -1148,21 +1138,13 @@ namespace Microsoft.Xna.Framework.Graphics
 
 			if ((options & ClearOptions.DepthBuffer) == ClearOptions.DepthBuffer) 
             {
-#if GLES
-                GL.ClearDepth (depth);
+                GL.ClearDepth(depth);
                 GraphicsExtensions.CheckGLError();
-#else
-                GL.ClearDepth ((double)depth);
-#endif
-				bufferMask = bufferMask | ClearBufferMask.DepthBufferBit;
+                bufferMask = bufferMask | ClearBufferMask.DepthBufferBit;
 			}
 
-#if GLES
-			GL.Clear((uint)bufferMask);
-            GraphicsExtensions.CheckGLError();
-#else
 			GL.Clear(bufferMask);
-#endif
+            GraphicsExtensions.CheckGLError();
            		
             // Restore the previous render state.
 		    ScissorRectangle = prevScissorRect;
@@ -1590,11 +1572,7 @@ namespace Microsoft.Xna.Framework.Graphics
 #elif OPENGL
 				if (renderTarget.glFramebuffer == 0)
 				{
-#if GLES
-					GL.GenFramebuffers(1, ref renderTarget.glFramebuffer);
-#else
 					GL.GenFramebuffers(1, out renderTarget.glFramebuffer);
-#endif
                     GraphicsExtensions.CheckGLError();
                 }
 

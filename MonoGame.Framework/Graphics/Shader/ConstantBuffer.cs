@@ -42,6 +42,8 @@ namespace Microsoft.Xna.Framework.Graphics
         private int _program = -1;
         private int _location;
 
+        private StringBuilder _nameBuilder;
+
         static ConstantBuffer _lastConstantBufferApplied = null;
 
         /// <summary>
@@ -57,6 +59,7 @@ namespace Microsoft.Xna.Framework.Graphics
 
             // Share the immutable types.
             _name = cloneSource._name;
+            _nameBuilder = cloneSource._nameBuilder;
             _parameters = cloneSource._parameters;
             _offsets = cloneSource._offsets;
 
@@ -79,6 +82,7 @@ namespace Microsoft.Xna.Framework.Graphics
             _offsets = parameterOffsets;
 
             _name = name;
+            _nameBuilder = new StringBuilder(name);
 
             Initialize();
         }
@@ -265,7 +269,7 @@ namespace Microsoft.Xna.Framework.Graphics
             // uniform again and apply the state.
             if (_program != program)
             {
-                var location = GL.GetUniformLocation(program, _name);
+                var location = GL.GetUniformLocation(program, _nameBuilder);
                 GraphicsExtensions.CheckGLError();
                 if (location == -1)
                     return;

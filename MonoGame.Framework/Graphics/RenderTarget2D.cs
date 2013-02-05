@@ -136,11 +136,7 @@ namespace Microsoft.Xna.Framework.Graphics
 
 #elif OPENGL
 
-#if GLES
-			GL.GenRenderbuffers(1, ref glDepthStencilBuffer);
-#else
 			GL.GenRenderbuffers(1, out glDepthStencilBuffer);
-#endif
             GraphicsExtensions.CheckGLError();
             GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, this.glDepthStencilBuffer);
             GraphicsExtensions.CheckGLError();

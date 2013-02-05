@@ -72,6 +72,7 @@ namespace Microsoft.Xna.Framework.Graphics
         }
 
         private Attribute[] _attributes;
+        private StringBuilder _nameBuilder;
 
 #elif DIRECTX
 
@@ -167,6 +168,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 _attributes[a].format = reader.ReadInt16();
             }
 
+            _nameBuilder = new StringBuilder();
 #endif // OPENGL
         }
 
@@ -180,39 +182,17 @@ namespace Microsoft.Xna.Framework.Graphics
             //
             _shaderHandle = GL.CreateShader(Stage == ShaderStage.Vertex ? ShaderType.VertexShader : ShaderType.FragmentShader);
             GraphicsExtensions.CheckGLError();
-#if GLES
-			GL.ShaderSource(_shaderHandle, 1, new string[] { _glslCode }, (int[])null);
-#else
             GL.ShaderSource(_shaderHandle, _glslCode);
-#endif
             GraphicsExtensions.CheckGLError();
             GL.CompileShader(_shaderHandle);
             GraphicsExtensions.CheckGLError();
 
             var compiled = 0;
-#if GLES
-			GL.GetShader(_shaderHandle, ShaderParameter.CompileStatus, ref compiled);
-#else
             GL.GetShader(_shaderHandle, ShaderParameter.CompileStatus, out compiled);
-#endif
             GraphicsExtensions.CheckGLError();
             if (compiled == (int)All.False)
             {
-#if GLES
-                string log = "";
-                int length = 0;
-				GL.GetShader(_shaderHandle, ShaderParameter.InfoLogLength, ref length);
-                GraphicsExtensions.CheckGLError();
-                if (length > 0)
-                {
-                    var logBuilder = new StringBuilder(length);
-					GL.GetShaderInfoLog(_shaderHandle, length, ref length, logBuilder);
-                    GraphicsExtensions.CheckGLError();
-                    log = logBuilder.ToString();
-                }
-#else
                 var log = GL.GetShaderInfoLog(_shaderHandle);
-#endif
                 Console.WriteLine(log);
 
                 if (GL.IsShader(_shaderHandle))
@@ -232,7 +212,9 @@ namespace Microsoft.Xna.Framework.Graphics
         {
             for (int i = 0; i < _attributes.Length; ++i)
             {
-                _attributes[i].location = GL.GetAttribLocation(program, _attributes[i].name);
+                _nameBuilder.Length = 0;
+                _nameBuilder.Append(_attributes[i].name);
+                _attributes[i].location = GL.GetAttribLocation(program, _nameBuilder);
                 GraphicsExtensions.CheckGLError();
             }
         }
@@ -252,7 +234,9 @@ namespace Microsoft.Xna.Framework.Graphics
             // Assign the texture unit index to the sampler uniforms.
             foreach (var sampler in Samplers)
             {
-                var loc = GL.GetUniformLocation(program, sampler.name);
+                _nameBuilder.Length = 0;
+                _nameBuilder.Append(sampler.name);
+                var loc = GL.GetUniformLocation(program, _nameBuilder);
                 GraphicsExtensions.CheckGLError();
                 if (loc != -1)
                 {

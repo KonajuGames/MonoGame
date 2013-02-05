@@ -152,7 +152,7 @@ namespace Microsoft.Xna.Framework
             Android.Util.Log.Debug("MonoGame", "AndroidGameWindow.CreateFrameBuffer");
 			try
             {
-                GLContextVersion = GLContextVersion.Gles2_0;
+                this.ContextRenderingApi = GLVersion.ES2;
 				try
 				{
 					base.CreateFrameBuffer();

@@ -602,11 +602,7 @@ namespace Microsoft.Xna.Framework.Graphics
         public static int GetBoundTexture2D()
         {
             var prevTexture = 0;
-#if GLES
-            GL.GetInteger(GetPName.TextureBinding2D, ref prevTexture);
-#else
             GL.GetInteger(GetPName.TextureBinding2D, out prevTexture);
-#endif
             GraphicsExtensions.LogGLError("GraphicsExtensions.GetBoundTexture2D() GL.GetInteger");
             return prevTexture;
         }
@@ -614,16 +610,9 @@ namespace Microsoft.Xna.Framework.Graphics
         [System.Diagnostics.Conditional("DEBUG")]
         public static void CheckGLError()
         {
-#if GLES
-            All error = GL.GetError();
-            if (error != All.False)
+            var error = GL.GetError();
+            if ((int)error != (int)ErrorCode.NoError)
                 throw new MonoGameGLException("GL.GetError() returned " + error.ToString());
-#elif OPENGL
-            ErrorCode error = GL.GetError();
-            if (error != ErrorCode.NoError)
-                throw new MonoGameGLException("GL.GetError() returned " + error.ToString());
-#endif
-
         }
 #endif
 

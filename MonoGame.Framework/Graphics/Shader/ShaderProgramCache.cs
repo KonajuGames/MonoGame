@@ -17,6 +17,7 @@ using OpenTK.Graphics.ES20;
 using ActiveUniformType = OpenTK.Graphics.ES20.All;
 using ShaderType = OpenTK.Graphics.ES20.All;
 using ProgramParameter = OpenTK.Graphics.ES20.All;
+using System.Text;
 #endif
 #endif
 
@@ -110,24 +111,18 @@ namespace Microsoft.Xna.Framework.Graphics
 
             var linked = 0;
 
-#if GLES
-			GL.GetProgram(program, ProgramParameter.LinkStatus, ref linked);
-#else
             GL.GetProgram(program, ProgramParameter.LinkStatus, out linked);
-#endif
             GraphicsExtensions.LogGLError("VertexShaderCache.Link(), GL.GetProgram");
             if (linked == 0)
             {
-#if !GLES
                 var log = GL.GetProgramInfoLog(program);
                 Console.WriteLine(log);
-#endif
                 throw new InvalidOperationException("Unable to link effect program");
             }
 
             ShaderProgramInfo info;
             info.program = program;
-            info.posFixupLoc = GL.GetUniformLocation(program, "posFixup");
+            info.posFixupLoc = GL.GetUniformLocation(program, new StringBuilder("posFixup"));
 
             _programCache.Add(vertexShader.HashKey | pixelShader.HashKey, info);             
         }
