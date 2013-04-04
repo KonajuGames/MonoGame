@@ -94,8 +94,11 @@ namespace Microsoft.Xna.Framework.GamerServices
 #endif
 
 #if WINRT
-
+#if DEBUG
+            var licenseInformation = CurrentAppSimulator.LicenseInformation;
+#else
             var licenseInformation = CurrentApp.LicenseInformation;
+#endif
             licenseInformation.LicenseChanged += () => 
                 isTrialMode = !licenseInformation.IsActive || licenseInformation.IsTrial;
 
