@@ -54,6 +54,12 @@ using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Media;
 #endif
 
+#if ANDROID
+using Android.App;
+using Android.Content.PM;
+using Java.Util.Zip;
+#endif
+
 namespace Microsoft.Xna.Framework.Content
 {
 	public partial class ContentManager : IDisposable
@@ -64,7 +70,13 @@ namespace Microsoft.Xna.Framework.Content
         private Dictionary<string, object> loadedAssets = new Dictionary<string, object>();
 		private List<IDisposable> disposableAssets = new List<IDisposable>();
         private bool disposed;
-		
+#if ANDROID
+        ApplicationInfo ainfo;
+        PackageInfo pinfo;
+        private bool hasAssets;
+        ZipFile zif;
+#endif
+
 		private static object ContentManagerLock = new object();
         private static List<WeakReference> ContentManagers = new List<WeakReference>();
 
@@ -147,6 +159,7 @@ namespace Microsoft.Xna.Framework.Content
 			}
 			this.serviceProvider = serviceProvider;
             AddContentManager(this);
+            Init();
 		}
 
 		public ContentManager(IServiceProvider serviceProvider, string rootDirectory)
@@ -162,9 +175,27 @@ namespace Microsoft.Xna.Framework.Content
 			this.RootDirectory = rootDirectory;
 			this.serviceProvider = serviceProvider;
             AddContentManager(this);
-		}
+            Init();
+        }
 
-		public void Dispose()
+        void Init()
+        {
+#if ANDROID
+            Activity activity = Game.Activity;
+            ainfo = activity.ApplicationInfo;
+            pinfo = activity.PackageManager.GetPackageInfo(ainfo.PackageName, PackageInfoFlags.MetaData);
+            hasAssets = Game.Activity.Assets.List(this.RootDirectory).Length > 0;
+            string sourcePath = hasAssets ? ainfo.SourceDir : Path.Combine(
+                    Android.OS.Environment.ExternalStorageDirectory.AbsolutePath,
+                    "Android",
+                    "obb",
+                    ainfo.PackageName,
+                    String.Format("main.{0}.{1}.obb", pinfo.VersionCode, ainfo.PackageName));
+            zif = new ZipFile(sourcePath);
+#endif
+        }
+
+        public void Dispose()
 		{
 			Dispose(true);
 			// Tell the garbage collector not to call the finalizer
@@ -180,7 +211,15 @@ namespace Microsoft.Xna.Framework.Content
 		{
 			if (!disposed)
 			{
-				Unload();
+                if (disposing)
+                {
+                    Unload();
+#if ANDROID
+                    if (zif != null)
+                        zif.Dispose();
+                    zif = null;
+#endif
+                }
 				disposed = true;
 			}
 		}
@@ -214,41 +253,53 @@ namespace Microsoft.Xna.Framework.Content
             loadedAssets[assetName] = result;
             return result;
 		}
-		
-		protected virtual Stream OpenStream(string assetName)
-		{
-			Stream stream;
-			try
+
+        protected virtual Stream OpenStream(string assetName)
+        {
+            Stream stream;
+            try
             {
                 string assetPath = Path.Combine(RootDirectory, assetName) + ".xnb";
-                stream = TitleContainer.OpenStream(assetPath);
 
-#if ANDROID
-                // Read the asset into memory in one go. This results in a ~50% reduction
-                // in load times on Android due to slow Android asset streams.
-                MemoryStream memStream = new MemoryStream();
-                stream.CopyTo(memStream);
-                memStream.Seek(0, SeekOrigin.Begin);
-                stream.Close();
-                stream = memStream;
+#if !ANDROID
+                stream = TitleContainer.OpenStream(assetPath);      
+#else
+                string filePath = hasAssets ? Path.Combine("assets", assetPath) : assetPath;
+
+                MemoryStream mstream = null;
+                using (ZipEntry ze = zif.GetEntry(filePath))
+                {
+                    stream = zif.GetInputStream(ze);
+                    try
+                    {
+                        mstream = new MemoryStream((int)ze.Size);
+                        stream.CopyTo(mstream);
+                        mstream.Seek(0, SeekOrigin.Begin);
+                    }
+                    finally
+                    {
+                        stream.Dispose();
+                    }
+                    stream = mstream;
+                }
 #endif
-			}
-			catch (FileNotFoundException fileNotFound)
-			{
-				throw new ContentLoadException("The content file was not found.", fileNotFound);
-			}
+            }
+            catch (FileNotFoundException fileNotFound)
+            {
+                throw new ContentLoadException("The content file was not found.", fileNotFound);
+            }
 #if !WINRT
-			catch (DirectoryNotFoundException directoryNotFound)
-			{
-				throw new ContentLoadException("The directory was not found.", directoryNotFound);
-			}
+            catch (DirectoryNotFoundException directoryNotFound)
+            {
+                throw new ContentLoadException("The directory was not found.", directoryNotFound);
+            }
 #endif
-			catch (Exception exception)
-			{
-				throw new ContentLoadException("Opening stream error.", exception);
-			}
-			return stream;
-		}
+            catch (Exception exception)
+            {
+                throw new ContentLoadException("Opening stream error.", exception);
+            }
+            return stream;
+        }
 
 		protected T ReadAsset<T>(string assetName, Action<IDisposable> recordDisposableObject)
 		{
