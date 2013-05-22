@@ -87,9 +87,7 @@ namespace Microsoft.Xna.Framework.Media
 
 #if WINDOWS_MEDIA_ENGINE
         private static readonly MediaEngine _mediaEngineEx;
-#if WINDOWS_PHONE
-        private static System.Windows.Threading.Dispatcher _dispatcher;
-#else
+#if !WINDOWS_PHONE
         private static CoreDispatcher _dispatcher;
 #endif
 #elif WINDOWS_MEDIA_SESSION
@@ -102,6 +100,7 @@ namespace Microsoft.Xna.Framework.Media
         private static readonly Guid MRPolicyVolumeService = Guid.Parse("1abaa2ac-9d3b-47c6-ab48-c59506de784d");
         private static readonly Guid SimpleAudioVolumeGuid = Guid.Parse("089EDF13-CF71-4338-8D13-9E569DBDC319");
 #elif WINDOWS_PHONE
+        private static System.Windows.Threading.Dispatcher _dispatcher;
         internal static MediaElement _mediaElement;
 #endif
 
@@ -136,6 +135,8 @@ namespace Microsoft.Xna.Framework.Media
 
             MediaManager.Startup(true);
             MediaFactory.CreateMediaSession(null, out _session);
+#elif WINDOWS_PHONE
+            _dispatcher = System.Windows.Deployment.Current.Dispatcher;
 #endif
         }
 
@@ -147,7 +148,12 @@ namespace Microsoft.Xna.Framework.Media
                 return;
 
 #if WINDOWS_PHONE
-            _dispatcher.BeginInvoke(() => OnSongFinishedPlaying(null, null));
+            if (!_dispatcher.CheckAccess())
+            {
+                _dispatcher.BeginInvoke(() => MediaEngineExOnPlaybackEvent(mediaEvent, param1, param2));
+                return;
+            }
+            OnSongFinishedPlaying(null, null);
 #else
             _dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => OnSongFinishedPlaying(null, null)).AsTask();
 #endif
@@ -164,6 +170,13 @@ namespace Microsoft.Xna.Framework.Media
             get { return _isMuted; }
             set
             {
+#if WINDOWS_PHONE
+                if (_dispatcher.CheckAccess())
+                {
+                    _dispatcher.BeginInvoke(() => { IsMuted = value; });
+                    return;
+                }
+#endif
 				_isMuted = value;
 
 #if WINDOWS_MEDIA_ENGINE
@@ -215,7 +228,9 @@ namespace Microsoft.Xna.Framework.Media
 #elif WINDOWS_MEDIA_SESSION
                 return _clock != null ? TimeSpan.FromTicks(_clock.Time) : TimeSpan.Zero;
 #elif WINDOWS_PHONE
-                return _mediaElement.Position;
+                if (_dispatcher.CheckAccess())
+                    return _mediaElement.Position;
+                throw new InvalidOperationException("MediaPlayer.PlayPosition must be called from the UI thread");
 #else
 				if (_queue.ActiveSong == null)
 					return TimeSpan.Zero;
@@ -283,8 +298,15 @@ namespace Microsoft.Xna.Framework.Media
         {
             get { return _volume; }
 			set 
-			{       
-				_volume = value;
+			{
+#if WINDOWS_PHONE
+                if (!_dispatcher.CheckAccess())
+                {
+                    _dispatcher.BeginInvoke(() => { Volume = value; });
+                    return;
+                }
+#endif
+                _volume = value;
 
 #if WINDOWS_MEDIA_ENGINE
                 _mediaEngineEx.Volume = value;       
@@ -306,6 +328,13 @@ namespace Microsoft.Xna.Framework.Media
 		
         public static void Pause()
         {
+#if WINDOWS_PHONE
+            if (!_dispatcher.CheckAccess())
+            {
+                _dispatcher.BeginInvoke(() => Pause());
+                return;
+            }
+#endif
             if (State != MediaState.Playing || _queue.ActiveSong == null)
                 return;
 
@@ -314,10 +343,7 @@ namespace Microsoft.Xna.Framework.Media
 #elif WINDOWS_MEDIA_SESSION
             _session.Pause();
 #elif WINDOWS_PHONE
-            Deployment.Current.Dispatcher.BeginInvoke(() =>
-            {
-                _mediaElement.Pause();
-            });
+            _mediaElement.Pause();
 #else
             _queue.ActiveSong.Pause();
 #endif
@@ -387,15 +413,17 @@ namespace Microsoft.Xna.Framework.Media
             var varStart = new Variant();
             _session.Start(null, varStart);
 #elif WINDOWS_PHONE
-            Deployment.Current.Dispatcher.BeginInvoke(() =>
+            if (!_dispatcher.CheckAccess())
             {
-                _mediaElement.Source = new Uri(song.FilePath, UriKind.Relative);
-                _mediaElement.Play();
+                _dispatcher.BeginInvoke(() => PlaySong(song));
+                return;
+            }
+            _mediaElement.Source = new Uri(song.FilePath, UriKind.Relative);
+            _mediaElement.Play();
 
-                // Ensure only one subscribe
-                _mediaElement.MediaEnded -= OnSongFinishedPlaying;
-                _mediaElement.MediaEnded += OnSongFinishedPlaying;
-            });
+            // Ensure only one subscribe
+            _mediaElement.MediaEnded -= OnSongFinishedPlaying;
+            _mediaElement.MediaEnded += OnSongFinishedPlaying;
 #else
             song.SetEventHandler(OnSongFinishedPlaying);			
 			song.Volume = _isMuted ? 0.0f : _volume;
@@ -422,11 +450,9 @@ namespace Microsoft.Xna.Framework.Media
 #if WINDOWS_PHONE
             if (IsRepeating)
             {
-                Deployment.Current.Dispatcher.BeginInvoke(() =>
-                {
-                    _mediaElement.Position = TimeSpan.Zero;
-                    _mediaElement.Play();
-                });
+                // MediaElement events are called on the UI thread, so no need for dispatching
+                _mediaElement.Position = TimeSpan.Zero;
+                _mediaElement.Play();
             }
 #endif
 			
@@ -435,6 +461,13 @@ namespace Microsoft.Xna.Framework.Media
 
         public static void Resume()
         {
+#if WINDOWS_PHONE
+            if (!_dispatcher.CheckAccess())
+            {
+                _dispatcher.BeginInvoke(() => Resume());
+                return;
+            }
+#endif
             if (State != MediaState.Paused)
                 return;
 
@@ -443,10 +476,7 @@ namespace Microsoft.Xna.Framework.Media
 #elif WINDOWS_MEDIA_SESSION
             _session.Start(null, null);
 #elif WINDOWS_PHONE
-            Deployment.Current.Dispatcher.BeginInvoke(() =>
-            {
-                _mediaElement.Play();
-            });
+            _mediaElement.Play();
 #else
 			_queue.ActiveSong.Resume();
 #endif
@@ -455,6 +485,13 @@ namespace Microsoft.Xna.Framework.Media
 
         public static void Stop()
         {
+#if WINDOWS_PHONE
+            if (!_dispatcher.CheckAccess())
+            {
+                _dispatcher.BeginInvoke(() => Stop());
+                return;
+            }
+#endif
             if (State == MediaState.Stopped)
                 return;
 
@@ -468,10 +505,7 @@ namespace Microsoft.Xna.Framework.Media
             _clock.Dispose();
             _clock = null;
 #elif WINDOWS_PHONE
-            Deployment.Current.Dispatcher.BeginInvoke(() =>
-            {
-                _mediaElement.Stop();
-            });
+            _mediaElement.Stop();
 #else		
 			// Loop through so that we reset the PlayCount as well
 			foreach(var song in Queue.Songs)
