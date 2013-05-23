@@ -75,7 +75,7 @@ namespace Microsoft.Xna.Framework.Graphics
 #endif
 
     static SamplerState () 
-        {
+    {
 #if OPENGL
 #if GLES
 			if (GraphicsCapabilities.SupportsTextureFilterAnisotropic)
@@ -88,62 +88,69 @@ namespace Microsoft.Xna.Framework.Graphics
             GraphicsExtensions.CheckGLError();
 #endif
 
-      AnisotropicClamp = new SamplerState () 
-            {
-        Filter = TextureFilter.Anisotropic,
-        AddressU = TextureAddressMode.Clamp,
-        AddressV = TextureAddressMode.Clamp,
-        AddressW = TextureAddressMode.Clamp,
-      };
-      
-      AnisotropicWrap = new SamplerState () 
-            {
-        Filter = TextureFilter.Anisotropic,
-        AddressU = TextureAddressMode.Wrap,
-        AddressV = TextureAddressMode.Wrap,
-        AddressW = TextureAddressMode.Wrap,
-      };
-      
-      LinearClamp = new SamplerState () 
-            {
-        Filter = TextureFilter.Linear,
-        AddressU = TextureAddressMode.Clamp,
-        AddressV = TextureAddressMode.Clamp,
-        AddressW = TextureAddressMode.Clamp,
-      };
-      
-      LinearWrap = new SamplerState () 
-            {
-        Filter = TextureFilter.Linear,
-        AddressU = TextureAddressMode.Wrap,
-        AddressV = TextureAddressMode.Wrap,
-        AddressW = TextureAddressMode.Wrap,
-      };
-      
-      PointClamp = new SamplerState () 
-            {
-        Filter = TextureFilter.Point,
-        AddressU = TextureAddressMode.Clamp,
-        AddressV = TextureAddressMode.Clamp,
-        AddressW = TextureAddressMode.Clamp,
-      };
-      
-      PointWrap = new SamplerState () 
-            {
-        Filter = TextureFilter.Point,
-        AddressU = TextureAddressMode.Wrap,
-        AddressV = TextureAddressMode.Wrap,
-        AddressW = TextureAddressMode.Wrap,
-      };
+        _anisotropicClamp = new Utilities.ObjectFactoryWithReset<SamplerState>(() => new SamplerState()
+              {
+                  Filter = TextureFilter.Anisotropic,
+                  AddressU = TextureAddressMode.Clamp,
+                  AddressV = TextureAddressMode.Clamp,
+                  AddressW = TextureAddressMode.Clamp,
+              });
+
+        _anisotropicWrap = new Utilities.ObjectFactoryWithReset<SamplerState>(() => new SamplerState()
+              {
+                  Filter = TextureFilter.Anisotropic,
+                  AddressU = TextureAddressMode.Wrap,
+                  AddressV = TextureAddressMode.Wrap,
+                  AddressW = TextureAddressMode.Wrap,
+              });
+
+        _linearClamp = new Utilities.ObjectFactoryWithReset<SamplerState>(() => new SamplerState()
+              {
+                  Filter = TextureFilter.Linear,
+                  AddressU = TextureAddressMode.Clamp,
+                  AddressV = TextureAddressMode.Clamp,
+                  AddressW = TextureAddressMode.Clamp,
+              });
+
+        _linearWrap = new Utilities.ObjectFactoryWithReset<SamplerState>(() => new SamplerState()
+              {
+                  Filter = TextureFilter.Linear,
+                  AddressU = TextureAddressMode.Wrap,
+                  AddressV = TextureAddressMode.Wrap,
+                  AddressW = TextureAddressMode.Wrap,
+              });
+
+        _pointClamp = new Utilities.ObjectFactoryWithReset<SamplerState>(() => new SamplerState()
+              {
+                  Filter = TextureFilter.Point,
+                  AddressU = TextureAddressMode.Clamp,
+                  AddressV = TextureAddressMode.Clamp,
+                  AddressW = TextureAddressMode.Clamp,
+              });
+
+        _pointWrap = new Utilities.ObjectFactoryWithReset<SamplerState>(() => new SamplerState()
+              {
+                  Filter = TextureFilter.Point,
+                  AddressU = TextureAddressMode.Wrap,
+                  AddressV = TextureAddressMode.Wrap,
+                  AddressW = TextureAddressMode.Wrap,
+              });
     }
     
-    public static readonly SamplerState AnisotropicClamp;
-    public static readonly SamplerState AnisotropicWrap;
-    public static readonly SamplerState LinearClamp;
-    public static readonly SamplerState LinearWrap;
-    public static readonly SamplerState PointClamp;
-    public static readonly SamplerState PointWrap;
-    
+    private static readonly Utilities.ObjectFactoryWithReset<SamplerState> _anisotropicClamp;
+    private static readonly Utilities.ObjectFactoryWithReset<SamplerState> _anisotropicWrap;
+    private static readonly Utilities.ObjectFactoryWithReset<SamplerState> _linearClamp;
+    private static readonly Utilities.ObjectFactoryWithReset<SamplerState> _linearWrap;
+    private static readonly Utilities.ObjectFactoryWithReset<SamplerState> _pointClamp;
+    private static readonly Utilities.ObjectFactoryWithReset<SamplerState> _pointWrap;
+
+    public static SamplerState AnisotropicClamp { get { return _anisotropicClamp.Value; } }
+    public static SamplerState AnisotropicWrap { get { return _anisotropicWrap.Value; } }
+    public static SamplerState LinearClamp { get { return _linearClamp.Value; } }
+    public static SamplerState LinearWrap { get { return _linearWrap.Value; } }
+    public static SamplerState PointClamp { get { return _pointClamp.Value; } }
+    public static SamplerState PointWrap { get { return _pointWrap.Value; } }
+
     public TextureAddressMode AddressU { get; set; }
     public TextureAddressMode AddressV { get; set; }
     public TextureAddressMode AddressW { get; set; }
@@ -165,6 +172,22 @@ namespace Microsoft.Xna.Framework.Graphics
         }
     
 #if DIRECTX
+
+        internal static void ResetStates()
+        {
+            _anisotropicClamp.Reset();
+            _anisotropicWrap.Reset();
+            _linearClamp.Reset();
+            _linearWrap.Reset();
+            _pointClamp.Reset();
+            _pointWrap.Reset();
+        }
+
+        protected internal override void GraphicsDeviceResetting()
+        {
+            SharpDX.Utilities.Dispose(ref _state);
+            base.GraphicsDeviceResetting();
+        }
 
         internal SharpDX.Direct3D11.SamplerState GetState(GraphicsDevice device)
         {
@@ -195,7 +218,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 desc.ComparisonFunction = SharpDX.Direct3D11.Comparison.Never;
 
                 // Create the state.
-                _state = new SharpDX.Direct3D11.SamplerState(GraphicsDevice._d3dDevice, ref desc);
+                _state = new SharpDX.Direct3D11.SamplerState(GraphicsDevice._d3dDevice, desc);
             }
 
             Debug.Assert(GraphicsDevice == device, "The state was created for a different device!");
