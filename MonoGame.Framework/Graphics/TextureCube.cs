@@ -207,14 +207,11 @@ namespace Microsoft.Xna.Framework.Graphics
                     width = Math.Max(1, this.size >> level);
                     height = Math.Max(1, this.size >> level);
 
-                    // For DXT textures the width and height of each level is a multiple of 4.
+                    // For block compressed textures the width and height of each level is a multiple of 4.
                     // The last two mip levels require the width and height to be passed as 2x2 and 1x1, but
                     // there needs to be enough data passed to occupy a 4x4 block.
                     // Ref: http://www.mentby.com/Group/mac-opengl/issue-with-dxt-mipmapped-textures.html 
-                    if (_format == SurfaceFormat.Dxt1 ||
-                        _format == SurfaceFormat.Dxt1a ||
-                        _format == SurfaceFormat.Dxt3 ||
-                        _format == SurfaceFormat.Dxt5)
+                    if (_format.IsBlockCompressedFormat())
                     {
                         if (width > 4)
                             width = (width + 3) & ~3;

@@ -120,14 +120,19 @@ namespace Microsoft.Xna.Framework.Graphics
             {
                 case SurfaceFormat.Dxt1:
                 case SurfaceFormat.Dxt1a:
-                case SurfaceFormat.RgbPvrtc2Bpp:
-                case SurfaceFormat.RgbaPvrtc2Bpp:
                 case SurfaceFormat.RgbEtc1:
                 case SurfaceFormat.Dxt3:
                 case SurfaceFormat.Dxt5:
+                    Debug.Assert(GraphicsDevice.GraphicsProfile == GraphicsProfile.HiDef || MathHelper.IsPowerOfTwo(width), "Reach profile requires power of two width for DXT compressed textures");
+                    Debug.Assert(GraphicsDevice.GraphicsProfile == GraphicsProfile.Reach || ((width & 0x3) == 0), "HiDef profile requires width as a multiple of four for DXT compressed textures");
+                    pitch = ((width + 3) / 4) * _format.Size();
+                    break;
+
+                case SurfaceFormat.RgbPvrtc2Bpp:
+                case SurfaceFormat.RgbaPvrtc2Bpp:
                 case SurfaceFormat.RgbPvrtc4Bpp:
                 case SurfaceFormat.RgbaPvrtc4Bpp:
-                    Debug.Assert(MathHelper.IsPowerOfTwo(width), "This format must be power of two!");
+                    Debug.Assert(MathHelper.IsPowerOfTwo(width), "PVRTC textures must use power of two dimensions");
                     pitch = ((width + 3) / 4) * _format.Size();
                     break;
 

@@ -483,6 +483,7 @@ namespace Microsoft.Xna.Framework.Graphics
 				glFormat = PixelFormat.Luminance;
 				glType = PixelType.UnsignedByte;
 				break;
+
 #if !IOS && !ANDROID
 			case SurfaceFormat.Dxt1:
 				glInternalFormat = PixelInternalFormat.CompressedRgbS3tcDxt1Ext;
@@ -500,7 +501,23 @@ namespace Microsoft.Xna.Framework.Graphics
 				glInternalFormat = PixelInternalFormat.CompressedRgbaS3tcDxt5Ext;
 				glFormat = (PixelFormat)All.CompressedTextureFormats;
 				break;
-			
+            case SurfaceFormat.RgbAtitc:
+                glInternalFormat = (PixelInternalFormat)0x8C92;
+                glFormat = (PixelFormat)All.CompressedTextureFormats;
+                break;
+            case SurfaceFormat.RgbaAtitc:
+                glInternalFormat = (PixelInternalFormat)0x8C93;
+                glFormat = (PixelFormat)All.CompressedTextureFormats;
+                break;
+            case SurfaceFormat.Bc4:
+                glInternalFormat = (PixelInternalFormat)0x87F9;
+                glFormat = (PixelFormat)All.CompressedTextureFormats;
+                break;
+            case SurfaceFormat.Bc5:
+                glInternalFormat = (PixelInternalFormat)0x87FA;
+                glFormat = (PixelFormat)All.CompressedTextureFormats;
+                break;
+
 			case SurfaceFormat.Single:
 				glInternalFormat = PixelInternalFormat.R32f;
 				glFormat = PixelFormat.Red;
@@ -590,6 +607,31 @@ namespace Microsoft.Xna.Framework.Graphics
                 glInternalFormat = (PixelInternalFormat)0x83F3;
 				glFormat = (PixelFormat)All.CompressedTextureFormats;
 				break;
+                
+            case SurfaceFormat.RgbAtitc:
+                glInternalFormat = PixelInternalFormat.AtcRgbAmd;
+                glFormat = (PixelFormat)All.CompressedTextureFormats;
+                break;
+                
+            case SurfaceFormat.RgbaAtitc:
+                glInternalFormat = PixelInternalFormat.AtcRgbaExplicitAlphaAmd;
+                glFormat = (PixelFormat)All.CompressedTextureFormats;
+                break;
+                
+            case SurfaceFormat.Bc4:
+                glInternalFormat = PixelInternalFormat.GL_3DcXAmd;
+                glFormat = (PixelFormat)All.CompressedTextureFormats;
+                break;
+                
+            case SurfaceFormat.Bc5:
+                glInternalFormat = PixelInternalFormat.GL_3DcXyAmd;
+                glFormat = (PixelFormat)All.CompressedTextureFormats;
+                break;
+
+            case SurfaceFormat.RgbEtc1:
+                glInternalFormat = PixelInternalFormat.Etc1Rgb8Oes;
+                glFormat = (PixelFormat)All.CompressedTextureFormats;
+                break;
 #endif
                     
 
@@ -627,12 +669,16 @@ namespace Microsoft.Xna.Framework.Graphics
                 case SurfaceFormat.RgbPvrtc2Bpp:
                 case SurfaceFormat.RgbaPvrtc2Bpp:
                 case SurfaceFormat.RgbEtc1:
+                case SurfaceFormat.RgbAtitc:
+                case SurfaceFormat.Bc4:
                     // One texel in DXT1, PVRTC 2bpp and ETC1 is a minimum 4x4 block, which is 8 bytes
                     return 8;
                 case SurfaceFormat.Dxt3:
                 case SurfaceFormat.Dxt5:
                 case SurfaceFormat.RgbPvrtc4Bpp:
                 case SurfaceFormat.RgbaPvrtc4Bpp:
+                case SurfaceFormat.RgbaAtitc:
+                case SurfaceFormat.Bc5:
                     // One texel in DXT3, DXT5 and PVRTC 4bpp is a minimum 4x4 block, which is 16 bytes
                     return 16;
                 case SurfaceFormat.Alpha8:
@@ -660,7 +706,29 @@ namespace Microsoft.Xna.Framework.Graphics
                     throw new NotImplementedException();
             }
         }
-		
+
+        public static bool IsBlockCompressedFormat(this SurfaceFormat format)
+        {
+            switch (format)
+            {
+                case SurfaceFormat.Dxt1:
+                case SurfaceFormat.Dxt1a:
+                case SurfaceFormat.Dxt3:
+                case SurfaceFormat.Dxt5:
+                case SurfaceFormat.RgbaAtitc:
+                case SurfaceFormat.RgbAtitc:
+                case SurfaceFormat.RgbEtc1:
+                case SurfaceFormat.RgbaPvrtc2Bpp:
+                case SurfaceFormat.RgbaPvrtc4Bpp:
+                case SurfaceFormat.RgbPvrtc2Bpp:
+                case SurfaceFormat.RgbPvrtc4Bpp:
+                case SurfaceFormat.Bc4:
+                case SurfaceFormat.Bc5:
+                    return true;
+            }
+            return false;
+        }
+
         public static int GetTypeSize(this VertexElementFormat elementFormat)
         {
             switch (elementFormat)

@@ -231,6 +231,11 @@ namespace Microsoft.Xna.Framework.Graphics
                         case SurfaceFormat.Dxt1a:
                         case SurfaceFormat.Dxt3:
                         case SurfaceFormat.Dxt5:
+                        case SurfaceFormat.RgbAtitc:
+                        case SurfaceFormat.RgbaAtitc:
+                        case SurfaceFormat.RgbEtc1:
+                        case SurfaceFormat.Bc4:
+                        case SurfaceFormat.Bc5:
                             imageSize = ((this.width + 3) / 4) * ((this.height + 3) / 4) * format.Size();
                             break;
                         default:
@@ -324,14 +329,11 @@ namespace Microsoft.Xna.Framework.Graphics
                         w = Math.Max(width >> level, 1);
                         h = Math.Max(height >> level, 1);
 
-                        // For DXT textures the width and height of each level is a multiple of 4.
+                        // For block compressed textures the width and height of each level is a multiple of 4.
                         // The last two mip levels require the width and height to be passed as 2x2 and 1x1, but
                         // there needs to be enough data passed to occupy a 4x4 block.
                         // Ref: http://www.mentby.com/Group/mac-opengl/issue-with-dxt-mipmapped-textures.html 
-                        if (_format == SurfaceFormat.Dxt1 ||
-                            _format == SurfaceFormat.Dxt1a ||
-                            _format == SurfaceFormat.Dxt3 ||
-                            _format == SurfaceFormat.Dxt5)
+                        if (_format.IsBlockCompressedFormat())
                         {
                             if (w > 4)
                                 w = (w + 3) & ~3;
@@ -514,7 +516,6 @@ namespace Microsoft.Xna.Framework.Graphics
                         switch (Format)
                         {
                             case SurfaceFormat.Color: //kTexture2DPixelFormat_RGBA8888
-                            case SurfaceFormat.Dxt3:
                                 sz = 4;
                                 pixelOffset = dataRowColOffset * sz;
                                 result.R = imageInfo[pixelOffset];
@@ -1138,15 +1139,12 @@ namespace Microsoft.Xna.Framework.Graphics
             switch (this.Format)
             {
                 case SurfaceFormat.Color: //kTexture2DPixelFormat_RGBA8888
-                case SurfaceFormat.Dxt3:
-
                     sz = 4;
                     imageInfo = new byte[(Width * Height) * sz];
                     break;
                 case SurfaceFormat.Bgra4444: //kTexture2DPixelFormat_RGBA4444
                     sz = 2;
                     imageInfo = new byte[(Width * Height) * sz];
-
                     break;
                 case SurfaceFormat.Bgra5551: //kTexture2DPixelFormat_RGB5A1
                     sz = 2;

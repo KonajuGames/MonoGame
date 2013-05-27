@@ -101,6 +101,11 @@ namespace Microsoft.Xna.Framework.Graphics
         /// </summary>
         internal static bool SupportsAtitc { get; private set; }
 
+        /// <summary>
+        /// Gets the support the 3Dc normal map compression
+        /// </summary>
+        internal static bool Supports3Dc { get; private set; }
+
         internal static void Initialize(GraphicsDevice device)
         {
 			SupportsNonPowerOfTwo = GetNonPowerOfTwo(device);
@@ -131,6 +136,7 @@ namespace Microsoft.Xna.Framework.Graphics
             SupportsEtc1 = device._extensions.Contains("GL_OES_compressed_ETC1_RGB8_texture");
             SupportsAtitc = device._extensions.Contains("GL_ATI_texture_compression_atitc") ||
                 device._extensions.Contains("GL_AMD_compressed_ATC_texture");
+            Supports3Dc = device._extensions.Contains("GL_AMD_compressed_3DC_texture");
 #endif
         }
 

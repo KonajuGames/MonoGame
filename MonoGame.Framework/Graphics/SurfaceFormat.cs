@@ -70,7 +70,12 @@ namespace Microsoft.Xna.Framework.Graphics
         Bgra32 = 21,    // B8G8R8A8
         
 		// Good explanation of compressed formats for mobile devices (aimed at Android, but describes PVRTC)
-		// http://developer.motorola.com/docstools/library/understanding-texture-compression/
+        // http://www.motorola.com/sites/motodev/library/understanding_texture_compression.html
+
+        // AMD 3Dc normal map compression
+        // Also known as BC4 (single channel) and BC5 (two channel)
+        Bc4 = 40,
+        Bc5 = 41,
 
 		// PowerVR texture compression (iOS and Android)
 		RgbPvrtc2Bpp = 50,
@@ -80,6 +85,11 @@ namespace Microsoft.Xna.Framework.Graphics
 
 		// Ericcson Texture Compression (Android)
 		RgbEtc1 = 60,
+
+        // ATITC
+        // We only support explicit alpha, not the interpolated alpha format
+        RgbAtitc = 65,
+        RgbaAtitc = 66,
 
         // DXT1 also has a 1-bit alpha form
         Dxt1a = 70,
