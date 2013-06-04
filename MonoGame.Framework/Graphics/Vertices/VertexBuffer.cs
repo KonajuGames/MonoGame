@@ -22,7 +22,7 @@ namespace Microsoft.Xna.Framework.Graphics
 {
 	public class VertexBuffer : GraphicsResource
     {
-        protected bool _isDynamic;
+        internal bool _isDynamic;
 
 #if DIRECTX
         private SharpDX.Direct3D11.VertexBufferBinding _binding;

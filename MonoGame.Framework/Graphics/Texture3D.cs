@@ -62,8 +62,8 @@ namespace Microsoft.Xna.Framework.Graphics
             this.width = width;
             this.height = height;
             this.depth = depth;
-            this.levelCount = 1;
-		    this.format = format;
+            this._levelCount = 1;
+		    this._format = format;
 
 #if OPENGL
 			this.glTarget = TextureTarget.Texture3D;
@@ -86,7 +86,7 @@ namespace Microsoft.Xna.Framework.Graphics
             this.mipMap = mipMap;
 
             if (mipMap)
-                this.levelCount = CalculateMipLevels(width, height, depth);
+                this._levelCount = CalculateMipLevels(width, height, depth);
 
             // Create texture
             GetTexture();
@@ -102,8 +102,8 @@ namespace Microsoft.Xna.Framework.Graphics
                 Width = width,
                 Height = height,
                 Depth = depth,
-                MipLevels = levelCount,
-                Format = SharpDXHelper.ToFormat(format),
+                MipLevels = _levelCount,
+                Format = SharpDXHelper.ToFormat(_format),
                 BindFlags = BindFlags.ShaderResource,
                 CpuAccessFlags = CpuAccessFlags.None,
                 Usage = ResourceUsage.Default,
