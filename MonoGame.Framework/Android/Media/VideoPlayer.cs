@@ -51,11 +51,13 @@ namespace Microsoft.Xna.Framework.Media
 		private MediaState _state;
 		private bool _isLooped;
 		private Game _game;
+        private float _volume;
 
         public VideoPlayer()
         {
 			_state = MediaState.Stopped;
 			_game = Game.Instance;
+            _volume = 1.0f;
         }
 
         public Texture2D GetTexture()
@@ -87,16 +89,17 @@ namespace Microsoft.Xna.Framework.Media
 
             _video.Player.SetDisplay(_game.Window.Holder);
             _video.Player.Start();
+            _video.Player.SetVolume(_volume, _volume);
 
             _state = MediaState.Playing;
-            AndroidGamePlatform.IsPlayingVdeo = true;
+            AndroidGamePlatform.IsPlayingVideo = true;
         }
 
         public void Stop()
         {
             _video.Player.Stop();
 			_state = MediaState.Stopped;
-            AndroidGamePlatform.IsPlayingVdeo = false;
+            AndroidGamePlatform.IsPlayingVideo = false;
            _video.Player.SetDisplay(null);
         }
 
@@ -117,6 +120,23 @@ namespace Microsoft.Xna.Framework.Media
             get
             {
                 return _video;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the video player volume.  Ranges from 0.0 (silent) to 1.0 (full).
+        /// </summary>
+        public float Volume
+        {
+            get
+            {
+                return _volume;
+            }
+            set
+            {
+                _volume = MathHelper.Clamp(value, 0.0f, 1.0f);
+                if (_video != null)
+                    _video.Player.SetVolume(_volume, _volume);
             }
         }
 	}
