@@ -110,7 +110,7 @@ namespace Microsoft.Xna.Framework
         }
 
         private bool _initialized;
-        public static bool IsPlayingVdeo { get; set; }
+        public static bool IsPlayingVideo { get; set; }
 		private bool _exiting = false;
         private OpenALSoundController soundControllerInstance;
 
@@ -161,7 +161,7 @@ namespace Microsoft.Xna.Framework
         public override bool BeforeDraw(GameTime gameTime)
         {
             PrimaryThreadLoader.DoLoads();
-            return !IsPlayingVdeo;
+            return !IsPlayingVideo;
         }
 
         public override void BeforeInitialize()
