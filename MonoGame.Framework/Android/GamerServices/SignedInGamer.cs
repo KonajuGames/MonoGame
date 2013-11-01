@@ -333,17 +333,41 @@ namespace Microsoft.Xna.Framework.GamerServices
 	
 	public class SignedInEventArgs : EventArgs
 	{
-		public SignedInEventArgs ( SignedInGamer gamer )
+        /// <summary>
+        /// Gets the gamer that signed in.
+        /// </summary>
+        public SignedInGamer Gamer { get; private set; }
+
+        /// <summary>
+        /// Creates an instance of SignedInEventArgs.
+        /// </summary>
+        /// <param name="gamer">The gamer that signed in.</param>
+		public SignedInEventArgs(SignedInGamer gamer)
 		{
-			
+            if (gamer == null)
+                throw new ArgumentNullException("gamer");
+
+            Gamer = gamer;
 		}
 	}
 	
 	public class SignedOutEventArgs : EventArgs
 	{
-		public SignedOutEventArgs (SignedInGamer gamer )
+        /// <summary>
+        /// Gets the gamer that signed out.
+        /// </summary>
+        public SignedInGamer Gamer { get; private set; }
+        
+        /// <summary>
+        /// Creates an instance of SignedOutEventArgs.
+        /// </summary>
+        /// <param name="gamer">The gamer that signed out.</param>
+        public SignedOutEventArgs(SignedInGamer gamer)
 		{
-			
-		}
+            if (gamer == null)
+                throw new ArgumentNullException("gamer");
+
+            Gamer = gamer;
+        }
 	}
 }
