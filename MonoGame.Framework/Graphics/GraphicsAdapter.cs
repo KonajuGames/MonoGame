@@ -76,6 +76,12 @@ namespace Microsoft.Xna.Framework.Graphics
         {
             _view = screen;
         }
+
+        // When the AndroidGameWindow.SurfaceChanged event is triggered, we need to reset the adapters we know about
+        static internal void ResetAdapters()
+        {
+            adapters = null;
+        }
 #else
         internal GraphicsAdapter()
         {

@@ -188,7 +188,8 @@ namespace Microsoft.Xna.Framework
 					}
 					Android.Util.Log.Debug("MonoGame", string.Format("Creating Color:Default Depth:{0} Stencil:{1}", depth, stencil));
 					GraphicsMode = new AndroidGraphicsMode(new ColorFormat(8,8,8,8), depth,stencil, 0, 0, false);
-					base.CreateFrameBuffer();
+                    base.Holder.SetFixedSize(_game.graphicsDeviceManager.PreferredBackBufferWidth, _game.graphicsDeviceManager.PreferredBackBufferHeight);
+                    base.CreateFrameBuffer();
 				}
 				catch(Exception)
 				{
@@ -526,9 +527,10 @@ namespace Microsoft.Xna.Framework
         {
             base.SurfaceChanged(holder, format, width, height);
             Android.Util.Log.Debug("MonoGame", "AndroidGameWindow.SurfaceChanged: format = " + format + ", width = " + width + ", height = " + height);
+            GraphicsAdapter.ResetAdapters();
 
             if (_game.GraphicsDevice != null)
-                _game.graphicsDeviceManager.ResetClientBounds();
+                _game.graphicsDeviceManager.ResetClientBounds(width, height);
         }
 
         void ISurfaceHolderCallback.SurfaceDestroyed(ISurfaceHolder holder)

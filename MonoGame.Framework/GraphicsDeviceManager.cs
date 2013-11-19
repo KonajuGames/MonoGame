@@ -299,7 +299,9 @@ namespace Microsoft.Xna.Framework
             _graphicsDevice.PresentationParameters.BackBufferWidth = isLandscape ? Math.Max(w, h) : Math.Min(w, h);
             _graphicsDevice.PresentationParameters.BackBufferHeight = isLandscape ? Math.Min(w, h) : Math.Max(w, h);
 
-            ResetClientBounds();
+#if ANDROID
+            ResetClientBounds(_graphicsDevice.PresentationParameters.BackBufferWidth, _graphicsDevice.PresentationParameters.BackBufferHeight);
+#endif
 #endif
 
             // Set the new display size on the touch panel.
@@ -547,6 +549,7 @@ namespace Microsoft.Xna.Framework
             }
         }
 
+#if ANDROID
         /// <summary>
         /// This method is used by MonoGame Android to adjust the game's drawn to area to fill
         /// as much of the screen as possible whilst retaining the aspect ratio inferred from
@@ -560,13 +563,12 @@ namespace Microsoft.Xna.Framework
         ///     graphics.PreferredBackBufferWidth = Window.ClientBounds.Width;
         ///
         /// </summary>
-        internal void ResetClientBounds()
+        internal void ResetClientBounds(int width, int height)
         {
-#if ANDROID
+            /*
             float preferredAspectRatio = (float)PreferredBackBufferWidth /
                                          (float)PreferredBackBufferHeight;
-            float displayAspectRatio = (float)GraphicsDevice.DisplayMode.Width / 
-                                       (float)GraphicsDevice.DisplayMode.Height;
+            float displayAspectRatio = (float)width / (float)height;
 
             float adjustedAspectRatio = preferredAspectRatio;
 
@@ -600,12 +602,15 @@ namespace Microsoft.Xna.Framework
                 newClientBounds.Width = GraphicsDevice.DisplayMode.Width;
                 newClientBounds.Height = GraphicsDevice.DisplayMode.Height;
             }
+            */
+
+            var newClientBounds = new Rectangle(0, 0, width, height);
 
             // Ensure buffer size is reported correctly
             _graphicsDevice.PresentationParameters.BackBufferWidth = newClientBounds.Width;
             _graphicsDevice.PresentationParameters.BackBufferHeight = newClientBounds.Height;
 
-            // Set the veiwport so the (potentially) resized client bounds are drawn in the middle of the screen
+            // Set the viewport so the (potentially) resized client bounds are drawn in the middle of the screen
             _graphicsDevice.Viewport = new Viewport(newClientBounds.X, -newClientBounds.Y, newClientBounds.Width, newClientBounds.Height);
 
             _game.Window.ClientBounds = newClientBounds;
