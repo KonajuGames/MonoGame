@@ -43,64 +43,52 @@ using System.IO;
 using System.Linq;
 using Microsoft.Xna.Framework.Graphics;
 
-
 namespace Microsoft.Xna.Framework.Media
 {
-    public sealed class Video : IDisposable
+    public sealed class Video
     {
-        internal Android.Media.MediaPlayer Player;
 		private string _fileName;
-		private Color _backColor = Color.Black;
-        bool disposed;
 
-        internal Video(string FileName)
-		{
-			_fileName = FileName;
-			Prepare();
-		}
-
-        ~Video()
+        internal string FileName
         {
-            Dispose(false);
+            get
+            {
+                return _fileName;
+            }
         }
 
-        public Color BackgroundColor
+        internal Video(string fileName)
 		{
-			set
-			{
-				_backColor = value;
-			}
-			get
-			{
-				return _backColor;
-			}
+			_fileName = fileName;
 		}
-		
-		public string FileName
+
+        public int Width { get; internal set; }
+
+        public int Height { get; internal set; }
+
+        public float FramesPerSecond { get; internal set; }
+
+        public TimeSpan Duration { get; internal set; }
+
+        public VideoSoundtrackType VideoSoundtrackType { get; internal set; }
+
+		internal static string Normalize(string fileName)
 		{
-			get 
-			{
-				return _fileName;
-			}
-		}
-		
-		internal static string Normalize(string FileName)
-		{
-            int index = FileName.LastIndexOf(Path.DirectorySeparatorChar);
+            int index = fileName.LastIndexOf(Path.DirectorySeparatorChar);
             string path = string.Empty;
-            string file = FileName;
+            string file = fileName;
             if (index >= 0)
             {
-                file = FileName.Substring(index + 1, FileName.Length - index - 1);
-                path = FileName.Substring(0, index);
+                file = fileName.Substring(index + 1, fileName.Length - index - 1);
+                path = fileName.Substring(0, index);
             }
             string[] files = Game.Activity.Assets.List(path);
 
             if (Contains(file, files))
-                return FileName;
+                return fileName;
 			
 			// Check the file extension
-			if (!string.IsNullOrEmpty(Path.GetExtension(FileName)))
+			if (!string.IsNullOrEmpty(Path.GetExtension(fileName)))
 			{
 				return null;
 			}
@@ -117,39 +105,6 @@ namespace Microsoft.Xna.Framework.Media
         private static bool Contains(string search, string[] arr)
         {
             return arr.Any(s => s == search);
-        }
-
-		internal void Prepare()
-		{
-            Player = new Android.Media.MediaPlayer();
-			if (Player != null )
-			{
-				var afd = Game.Activity.Assets.OpenFd(_fileName);
-				if (afd != null)
-				{
-		            Player.SetDataSource(afd.FileDescriptor, afd.StartOffset, afd.Length);						
-		            Player.Prepare();
-				}
-			}
-		}
-		
-		public void Dispose()
-		{
-            Dispose(true);
-            GC.SuppressFinalize(this);
-		}
-
-        void Dispose(bool disposing)
-        {
-            if (!disposed)
-            {
-                if (Player != null)
-                {
-                    Player.Dispose();
-                    Player = null;
-                }
-                disposed = true;
-            }
         }
     }
 }

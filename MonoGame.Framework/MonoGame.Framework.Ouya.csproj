@@ -25,7 +25,7 @@
     <DebugType>full</DebugType>
     <Optimize>False</Optimize>
     <OutputPath>bin\OUYA\Debug\</OutputPath>
-    <DefineConstants>DEBUG;ANDROID;GLES;OPENGL;OPENAL;PAUSE_SOUND_ON_APP_SUSPEND;OUYA</DefineConstants>
+    <DefineConstants>DEBUG;ANDROID;GLES;OPENGL;OPENAL;PAUSE_SOUND_ON_APP_SUSPEND;OUYA;API_LEVEL_11_OR_HIGHER</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
@@ -77,6 +77,7 @@
     <Compile Include="Android\Input\Touch\AndroidTouchEventManager.cs" />
     <Compile Include="Android\OrientationListener.cs" />
     <Compile Include="Android\ScreenReciever.cs" />
+    <Compile Include="Media\VideoSoundtrackType.cs" />
     <Compile Include="TitleContainer.cs" />
     <Compile Include="Audio\AudioCategory.cs" />
     <Compile Include="Content\ContentManager.cs" />
@@ -173,7 +174,7 @@
     <Compile Include="Graphics\Effect\EffectTechnique.cs" />
     <Compile Include="Graphics\Effect\EffectTechniqueCollection.cs" />
     <Compile Include="Graphics\States\BlendState.cs" />
-	<Compile Include="Graphics\States\TargetBlendState.cs" />
+    <Compile Include="Graphics\States\TargetBlendState.cs" />
     <Compile Include="Graphics\States\BlendFunction.cs" />
     <Compile Include="Graphics\States\Blend.cs" />
     <Compile Include="Graphics\States\CompareFunction.cs" />
