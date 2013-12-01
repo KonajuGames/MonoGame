@@ -159,7 +159,18 @@ namespace Microsoft.Xna.Framework.Graphics
 		{
 			get
 			{
+#if OUYA
+                float safeRatio = 0.1f;
+                float safeW = (float)width * safeRatio;
+                float safeH = (float)height * safeRatio;
+                return new Rectangle(
+                    (int)((float)x + safeW),
+                    (int)((float)y + safeH),
+                    (int)((float)width - safeW * 2.0f),
+                    (int)((float)height - safeH * 2.0f));
+#else
 				return new Rectangle(x,y,width,height);
+#endif
 			}
 		}
 		
