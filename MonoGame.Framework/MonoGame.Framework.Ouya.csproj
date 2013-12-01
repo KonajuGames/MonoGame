@@ -48,9 +48,6 @@
     <Reference Include="Mono.Android" />
     <Reference Include="mscorlib" />
     <Reference Include="OpenTK" />
-    <Reference Include="Ouya.Console.Api">
-      <HintPath>..\ThirdParty\Libs\OUYA\Ouya.Console.Api.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Serialization" />
@@ -432,6 +429,10 @@
     <ProjectReference Include="..\ThirdParty\Lidgren.Network\Lidgren.Network.Android.csproj">
       <Project>{565129E0-4EE5-4F6F-B403-C3484C9740BE}</Project>
       <Name>Lidgren.Network.Android</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ouya-csharp\Ouya.Console.Api\Ouya.Console.Api.csproj">
+      <Project>{493A4B6F-98CE-4000-8A0C-4A4726299061}</Project>
+      <Name>Ouya.Console.Api</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Novell\Novell.MonoDroid.CSharp.targets" />
