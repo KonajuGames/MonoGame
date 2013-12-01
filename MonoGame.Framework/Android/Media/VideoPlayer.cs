@@ -589,7 +589,9 @@ namespace Microsoft.Xna.Framework.Media
 #endif
                     }
                 }
+#if API_LEVEL_11_OR_HIGHER
                 GL_dispose();
+#endif
                 _video = null;
             }
             _isDisposed = true;

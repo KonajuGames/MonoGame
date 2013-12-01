@@ -36,7 +36,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>True</Optimize>
     <OutputPath>bin\OUYA\Release\</OutputPath>
-    <DefineConstants>ANDROID;GLES;OPENGL;OPENAL;PAUSE_SOUND_ON_APP_SUSPEND;OUYA</DefineConstants>
+    <DefineConstants>ANDROID;GLES;OPENGL;OPENAL;PAUSE_SOUND_ON_APP_SUSPEND;OUYA;API_LEVEL_11_OR_HIGHER</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AndroidUseSharedRuntime>False</AndroidUseSharedRuntime>
