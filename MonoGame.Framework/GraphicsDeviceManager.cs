@@ -318,7 +318,8 @@ namespace Microsoft.Xna.Framework
         {
             var presentationParameters = new PresentationParameters();
             presentationParameters.DepthStencilFormat = DepthFormat.Depth24;
-
+            presentationParameters.BackBufferWidth = _preferredBackBufferWidth;
+            presentationParameters.BackBufferHeight = _preferredBackBufferHeight;
 #if WINDOWS || WINRT
             _game.Window.SetSupportedOrientations(_supportedOrientations);
 
