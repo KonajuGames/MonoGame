@@ -337,6 +337,8 @@ namespace Microsoft.Xna.Framework.Audio
 #if DIRECTX
 					SharpDX.Multimedia.WaveFormat waveFormat = new SharpDX.Multimedia.WaveFormat(rate, chans);
 					sounds[current_entry] = new SoundEffect(waveFormat, audiodata, 0, audiodata.Length, wavebankentry.LoopRegion.Offset, wavebankentry.LoopRegion.Length).CreateInstance();
+#elif AUDIOTRACK
+                    sounds[current_entry] = new SoundEffect(audiodata, rate, chans == 2 ? AudioChannels.Stereo : AudioChannels.Mono).CreateInstance();
 #else
 					sounds[current_entry] = new SoundEffectInstance(audiodata, rate, chans);
 #endif                    
@@ -375,7 +377,7 @@ namespace Microsoft.Xna.Framework.Audio
                     
                     if (isWma || isM4a) {
                         //WMA data can sometimes be played directly
-#if DIRECTX
+#if DIRECTX || AUDIOTRACK
                         throw new NotImplementedException();
 #elif !WINRT
                         //hack - NSSound can't play non-wav from data, we have to give a filename
@@ -406,14 +408,26 @@ namespace Microsoft.Xna.Framework.Audio
                  * into the SoundEffect. No decoding should be necessary.
                  * -flibit
                  */
-                } else if (codec == MiniFormatTag_ADPCM) {
-                    using (MemoryStream dataStream = new MemoryStream(audiodata)) {
-                        using (BinaryReader source = new BinaryReader(dataStream)) {
+                }
+                else if (codec == MiniFormatTag_ADPCM)
+                {
+                    using (MemoryStream dataStream = new MemoryStream(audiodata))
+                    {
+                        using (BinaryReader source = new BinaryReader(dataStream))
+                        {
+#if AUDIOTRACK
+                            sounds[current_entry] = new SoundEffect(
+                                MSADPCMToPCM.MSADPCM_TO_PCM(source, (short)chans, (short)align),
+                                rate,
+                                chans == 2 ? AudioChannels.Stereo : AudioChannels.Mono
+                            ).CreateInstance();
+#else
                             sounds[current_entry] = new SoundEffectInstance(
                                 MSADPCMToPCM.MSADPCM_TO_PCM(source, (short) chans, (short) align),
                                 rate,
                                 chans
                             );
+#endif
                         }
                     }
 #endif

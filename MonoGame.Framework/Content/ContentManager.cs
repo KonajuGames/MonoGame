@@ -406,10 +406,12 @@ namespace Microsoft.Xna.Framework.Content
             {
                 return new Song(assetName);
             }
+#if !AUDIOTRACK
             else if ((typeof(T) == typeof(SoundEffect)))
             {
                 return new SoundEffect(assetName);
             }
+#endif
             else if ((typeof(T) == typeof(Video)))
             {
                 return new Video(assetName);

@@ -96,6 +96,7 @@ namespace Microsoft.Xna.Framework
             AndroidGameActivity.Paused += Activity_Paused;
             AndroidGameActivity.Resumed += Activity_Resumed;
 
+#if OPENAL
             // Setup our OpenALSoundController to handle our SoundBuffer pools
             try
             {
@@ -105,13 +106,15 @@ namespace Microsoft.Xna.Framework
             {
                 throw (new NoAudioHardwareException("Failed to init OpenALSoundController", ex));
             }
-
+#endif
             Window = new AndroidGameWindow(Game.Activity, game);
         }
 
         private bool _initialized;
 		private bool _exiting = false;
+#if OPENAL
         private OpenALSoundController soundControllerInstance;
+#endif
 
         public override void Exit()
         {
@@ -150,9 +153,11 @@ namespace Microsoft.Xna.Framework
                 _initialized = true;				
             }
 
+#if OPENAL
             // Update our OpenAL sound buffer pools
             if (soundControllerInstance != null)
                 soundControllerInstance.Update();
+#endif
 
             return true;
         }

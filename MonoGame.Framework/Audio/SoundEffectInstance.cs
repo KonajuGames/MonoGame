@@ -44,6 +44,8 @@ using System;
 using SharpDX.XAudio2;
 using SharpDX.X3DAudio;
 using SharpDX.Multimedia;
+#elif AUDIOTRACK
+using Android.Media;
 #else
 using System.IO;
 #endif
@@ -54,19 +56,25 @@ namespace Microsoft.Xna.Framework.Audio
 	public class SoundEffectInstance : IDisposable
 	{
 		private bool isDisposed = false;
-#if !DIRECTX
+#if !DIRECTX && !AUDIOTRACK
         private SoundState soundState = SoundState.Stopped;
-#endif
-#if ANDROID
-        private int _streamId = -1;
 #endif
 
 #if DIRECTX        
-        private SourceVoice _voice { get; set; }
-        private SoundEffect _effect { get; set; }
+        private SourceVoice _voice;
+        internal SoundEffect _effect;
 
         private bool _paused;
         private bool _loop;
+#elif AUDIOTRACK
+        //static System.Collections.Generic.Queue<AudioTrack> _
+        static int _numAudioTracks = 0;
+        AudioTrack _audioTrack;
+        internal SoundEffect _effect;
+        float _volume;
+        bool _loop;
+        float _pan;
+        float _pitch;
 #else
         private Sound _sound;
 		internal Sound Sound 
@@ -89,8 +97,15 @@ namespace Microsoft.Xna.Framework.Audio
             _effect = effect;
             _voice = voice;
         }
+#elif AUDIOTRACK
+        internal SoundEffectInstance(SoundEffect soundEffect)
+        {
+            _effect = soundEffect;
+        }
 #else
-        internal SoundEffectInstance(){}
+        internal SoundEffectInstance()
+        {
+        }
 
         /* Creates a standalone SoundEffectInstance from given wavedata. */
         internal SoundEffectInstance(byte[] buffer, int sampleRate, int channels)
@@ -126,28 +141,51 @@ namespace Microsoft.Xna.Framework.Audio
         }
 #endif
 
+        ~SoundEffectInstance()
+        {
+            Dispose(false);
+        }
+
         public void Dispose()
         {
-#if DIRECTX
-            if (_voice != null)
-            {
-                _voice.DestroyVoice();
-                _voice.Dispose();
-                _voice = null;
-            }
-		    _effect = null;
-#elif ANDROID
-            if (_streamId >= 0)
-                _sound.Stop(_streamId);
-#else
-            // When disposing a SoundEffectInstance, the Sound should
-            // just be stopped as it will likely be reused later
-            _sound.Stop();
-#endif
-			isDisposed = true;
+            Dispose(true);
+            GC.SuppressFinalize(this);
 		}
 		
-		public void Apply3D (AudioListener listener, AudioEmitter emitter)
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!isDisposed)
+            {
+                if (disposing)
+                {
+#if DIRECTX
+                    if (_voice != null)
+                    {
+                        _voice.DestroyVoice();
+                        _voice.Dispose();
+                        _voice = null;
+                    }
+		            _effect = null;
+#elif AUDIOTRACK
+                    if (_audioTrack != null)
+                    {
+                        --_numAudioTracks;
+                        _audioTrack.Release();
+                        _audioTrack.Dispose();
+                        _audioTrack = null;
+                    }
+                    _effect = null;
+#else
+                    // When disposing a SoundEffectInstance, the Sound should
+                    // just be stopped as it will likely be reused later
+                    _sound.Stop();
+#endif
+                }
+                isDisposed = true;
+            }
+        }
+
+		public void Apply3D(AudioListener listener, AudioEmitter emitter)
         {
 #if DIRECTX	
             // If we have no voice then nothing to do.
@@ -181,32 +219,31 @@ namespace Microsoft.Xna.Framework.Audio
 #endif
         }
 		
-		public void Apply3D (AudioListener[] listeners,AudioEmitter emitter)
+		public void Apply3D(AudioListener[] listeners,AudioEmitter emitter)
 		{
             foreach ( var l in listeners )
                 Apply3D(l, emitter);            
 		}		
 		
-		public void Pause ()
+		public void Pause()
         {
 #if DIRECTX         
             if (_voice != null)
                 _voice.Stop();
             _paused = true;
+#elif AUDIOTRACK
+            if (_audioTrack != null)
+                _audioTrack.Pause();
 #else
             if ( _sound != null )
 			{
-#if ANDROID
-				_sound.Pause(_streamId);
-#else
 				_sound.Pause();
-#endif
                 soundState = SoundState.Paused;
 			}
 #endif
 		}
 		
-		public void Play ()
+		public void Play()
         {
             if (State == SoundState.Playing)
                 return;
@@ -227,20 +264,42 @@ namespace Microsoft.Xna.Framework.Audio
             }
 
 		    _paused = false;
+#elif AUDIOTRACK
+            if (_audioTrack == null)
+            {
+                _audioTrack = new AudioTrack(Stream.Music, _effect._sampleRate, _effect._channelConfig, Encoding.Pcm16bit, _effect._data.Length, AudioTrackMode.Static);
+                TrackStatus result = (TrackStatus)_audioTrack.Write(_effect._data, 0, _effect._data.Length);
+                if (result != TrackStatus.ErrorBadValue && result != TrackStatus.ErrorInvalidOperation)
+                {
+                    ++_numAudioTracks;
+                    Android.Util.Log.Debug("Audio", "Number of AudioTrack instances: " + _numAudioTracks.ToString());
+                    _audioTrack.SetStereoVolume(_volume * (_pan > 0.0f ? 1.0f - _pan : 1.0f), _volume * (_pan < 0.0f ? 1.0f + _pan : 1.0f));
+                    if (_loop)
+                        _audioTrack.SetLoopPoints(0, _effect._frames, -1);
+                    if (_pitch != 0.0f)
+                        _audioTrack.SetPlaybackRate((int)((float)_effect._sampleRate * XnaPitchToAlPitch(_pitch)));
+                    _audioTrack.Play();
+                }
+                else
+                {
+                    _audioTrack.Release();
+                    _audioTrack.Dispose();
+                    _audioTrack = null;
+                }
+            }
+            else
+            {
+                if (_audioTrack.PlayState == PlayState.Stopped)
+                    _audioTrack.ReloadStaticData();
+                _audioTrack.Play();
+            }
 #else
             if ( _sound != null )
 			{
-#if ANDROID
-				if (soundState == SoundState.Paused)
-					_sound.Resume(_streamId);
-				else
-					_streamId = _sound.Play();
-#else
 				if (soundState == SoundState.Paused)
 					_sound.Resume();
 				else
 					_sound.Play();
-#endif
 				soundState = SoundState.Playing;
 			}
 #endif
@@ -253,11 +312,7 @@ namespace Microsoft.Xna.Framework.Audio
 		internal bool TryPlay()
 		{
 			Play();
-#if ANDROID
-			return _streamId != 0;
-#else
 			return true;
-#endif
 		}
 
 		public void Resume()
@@ -278,16 +333,18 @@ namespace Microsoft.Xna.Framework.Audio
                 _voice.Start();
             }
             _paused = false;
+#elif AUDIOTRACK
+            if (_audioTrack != null)
+            {
+                if (_audioTrack.PlayState == PlayState.Paused)
+                    _audioTrack.Play();
+            }
 #else
             if ( _sound != null )
 			{
 				if (soundState == SoundState.Paused)
 				{
-#if ANDROID
-					_sound.Resume(_streamId);
-#else
                     _sound.Resume();
-#endif
                 }
 				soundState = SoundState.Playing;
  			}
@@ -304,15 +361,16 @@ namespace Microsoft.Xna.Framework.Audio
             }
 
 		    _paused = false;
+#elif AUDIOTRACK
+            if (_audioTrack != null)
+            {
+                if (_audioTrack.PlayState != PlayState.Stopped)
+                    _audioTrack.Stop();
+            }
 #else
             if ( _sound != null )
 			{
-#if ANDROID
-				_sound.Stop(_streamId);
-				_streamId = -1;
-#else
                 _sound.Stop();
-#endif
                 soundState = SoundState.Stopped;
 			}
 #endif
@@ -325,20 +383,51 @@ namespace Microsoft.Xna.Framework.Audio
                 _voice.Stop(immediate ? 0 : (int)PlayFlags.Tails);
 
             _paused = false;
+#elif AUDIOTRACK
+            if (_audioTrack != null)
+            {
+                if (_audioTrack.PlayState != PlayState.Stopped)
+                    _audioTrack.Stop();
+            }
 #else
             if ( _sound != null )
 			{
-#if ANDROID
-                _sound.Stop(_streamId);
-                _streamId = -1;
-#else
                 _sound.Stop();
-#endif
 				soundState = SoundState.Stopped;
 			}
 #endif
         }		
 		
+#if AUDIOTRACK
+        internal void Recycle()
+        {
+            if (_audioTrack != null)
+            {
+                Android.Util.Log.Debug("Audio", "SoundEffectInstance recycled");
+                --_numAudioTracks;
+                _audioTrack.Release();
+                _audioTrack.Dispose();
+                _audioTrack = null;
+            }
+        }
+
+        private float XnaPitchToAlPitch(float xnaPitch)
+        {
+            /* 
+            XNA sets pitch bounds to [-1.0f, 1.0f], each end being one octave.
+             -OpenAL's AL_PITCH boundaries are (0.0f, INF). *
+             -Consider the function f(x) = 2 ^ x
+             -The domain is (-INF, INF) and the range is (0, INF). *
+             -0.0f is the original pitch for XNA, 1.0f is the original pitch for OpenAL.
+             -Note that f(0) = 1, f(1) = 2, f(-1) = 0.5, and so on.
+             -XNA's pitch values are on the domain, OpenAL's are on the range.
+             -Remember: the XNA limit is arbitrarily between two octaves on the domain. *
+             -To convert, we just plug XNA pitch into f(x). 
+                    */
+            return (float)Math.Pow(2, xnaPitch);
+        }
+#endif
+
 		public bool IsDisposed 
 		{ 
 			get
@@ -351,7 +440,7 @@ namespace Microsoft.Xna.Framework.Audio
 		{ 
 			get
             {
-#if DIRECTX
+#if DIRECTX || AUDIOTRACK
                 return _loop;
 #else
                 if ( _sound != null )
@@ -369,6 +458,18 @@ namespace Microsoft.Xna.Framework.Audio
             {
 #if DIRECTX
                 _loop = value;
+#elif AUDIOTRACK
+                if (_loop != value)
+                {
+                    _loop = value;
+                    if (_audioTrack != null)
+                    {
+                        if (_loop)
+                            _audioTrack.SetLoopPoints(0, _effect._frames, -1);
+                        else
+                            _audioTrack.SetLoopPoints(0, 0, 0);
+                    }
+                }
 #else
                 if ( _sound != null )
 				{
@@ -390,7 +491,7 @@ namespace Microsoft.Xna.Framework.Audio
 		{ 
 			get
             {
-#if DIRECTX                
+#if DIRECTX || AUDIOTRACK
                 return _pan;
 #else
                 if ( _sound != null )
@@ -494,6 +595,15 @@ namespace Microsoft.Xna.Framework.Audio
 
                 _voice.SetOutputMatrix(srcChannelCount, dstChannelCount, _panMatrix);
 
+#elif AUDIOTRACK
+                // According to XNA documentation:
+                // "Panning, ranging from -1.0f (full left) to 1.0f (full right). 0.0f is centered."
+                float clamped = MathHelper.Clamp(value, -1.0f, 1.0f);
+                if (clamped != _pan)
+                {
+                    _pan = clamped;
+                    _audioTrack.SetStereoVolume(_volume * (_pan > 0.0f ? 1.0f - _pan : 1.0f), _volume * (_pan < 0.0f ? 1.0f + _pan : 1.0f));
+                }
 #else
                 if ( _sound != null )
 				{
@@ -508,7 +618,7 @@ namespace Microsoft.Xna.Framework.Audio
 		
 		public float Pitch         
 		{             
-	            get
+            get
             {
 #if DIRECTX
                     if (_voice == null)
@@ -522,6 +632,8 @@ namespace Microsoft.Xna.Framework.Audio
                     pitch /= 12.0;
 
                     return (float)pitch;
+#elif AUDIOTRACK
+                return _pitch;
 #else
                 if ( _sound != null)
 				    {
@@ -529,8 +641,8 @@ namespace Microsoft.Xna.Framework.Audio
 				    }
 				    return 0.0f;
 #endif
-	            }
-	            set
+            }
+            set
             {
 #if DIRECTX
                     if (_voice == null)
@@ -539,7 +651,15 @@ namespace Microsoft.Xna.Framework.Audio
                     // NOTE: This is copy of what XAudio2.SemitonesToFrequencyRatio() does
                     // which avoids the native call and is actually more accurate.
                     var ratio = Math.Pow(2.0, value);
-                    _voice.SetFrequencyRatio((float)ratio);                  
+                    _voice.SetFrequencyRatio((float)ratio);
+#elif AUDIOTRACK
+                float clamped = MathHelper.Clamp(value, -1.0f, 1.0f);
+                if (clamped != _pitch)
+                {
+                    _pitch = clamped;
+                    if (_audioTrack != null)
+                        _audioTrack.SetPlaybackRate((int)((float)_effect._sampleRate * XnaPitchToAlPitch(_pitch)));
+                }
 #else
                 if ( _sound != null && _sound.Rate != value)
 				    {
@@ -563,20 +683,21 @@ namespace Microsoft.Xna.Framework.Audio
                 if (_paused)
                     return SoundState.Paused;
 
-                return SoundState.Playing;                                
-#elif ANDROID
-                // Android SoundPool can't tell us when a sound is finished playing.
-                // TODO: Remove this code when OpenAL for Android is implemented
-                if (_sound != null && IsLooped)
+                return SoundState.Playing;
+#elif AUDIOTRACK
+                if (_audioTrack != null)
                 {
-                    // Looping sounds use our stored state
-                    return soundState;
+                    switch (_audioTrack.PlayState)
+                    {
+                        case PlayState.Paused:
+                            return SoundState.Paused;
+                        case PlayState.Playing:
+                            if (_audioTrack.PlaybackHeadPosition < _effect._frames)
+                                return SoundState.Playing;
+                            return SoundState.Stopped;
+                    }
                 }
-                else
-                {
-                    // Non looping sounds always return Stopped
-                    return SoundState.Stopped;
-                }
+                return SoundState.Stopped;
 #else
                 if (_sound != null && soundState == SoundState.Playing && !_sound.Playing) 
                 {
@@ -597,6 +718,8 @@ namespace Microsoft.Xna.Framework.Audio
                     return 0.0f;
                 else
                     return _voice.Volume;
+#elif AUDIOTRACK
+                return _volume;
 #else
                 if (_sound != null)
 				{
@@ -614,6 +737,14 @@ namespace Microsoft.Xna.Framework.Audio
 #if DIRECTX
                 if (_voice != null)
                     _voice.SetVolume(value, XAudio2.CommitNow);
+#elif AUDIOTRACK
+                float clamped = MathHelper.Clamp(value, 0.0f, 1.0f);
+                if (clamped != _volume)
+                {
+                    _volume = clamped;
+                    if (_audioTrack != null)
+                        _audioTrack.SetStereoVolume(_volume * (_pan > 0.0f ? 1.0f - _pan : 1.0f), _volume * (_pan < 0.0f ? 1.0f + _pan : 1.0f));
+                }
 #else
                 if ( _sound != null )
 				{
@@ -625,7 +756,5 @@ namespace Microsoft.Xna.Framework.Audio
 #endif
 			}
 		}	
-		
-		
 	}
 }

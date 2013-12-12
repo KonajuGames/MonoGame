@@ -73,12 +73,11 @@ namespace Microsoft.Xna.Framework.Audio
         static List<SoundEffect> _soundEffects = new List<SoundEffect>();
 #endif
 
-#if DIRECTX || OPENAL
+#if DIRECTX || OPENAL || AUDIOTRACK
         // These three fields are used for keeping track of instances created
         // internally when Play is called directly on SoundEffect.
-        private List<SoundEffectInstance> _playingInstances;
+        static private List<SoundEffectInstance> _playingInstances = new List<SoundEffectInstance>(64);
         private List<SoundEffectInstance> _availableInstances;
-        private List<SoundEffectInstance> _toBeRecycledInstances;
 #endif
 
 #if DIRECTX
@@ -111,6 +110,10 @@ namespace Microsoft.Xna.Framework.Audio
             get;
             set;
         }
+#elif AUDIOTRACK
+        internal int _sampleRate;
+        internal Android.Media.ChannelConfiguration _channelConfig;
+        internal int _frames;
 #else
         private Sound _sound;
         private SoundEffectInstance _instance;
@@ -145,7 +148,7 @@ namespace Microsoft.Xna.Framework.Audio
             _soundEffects.Add(this);
 #endif
         }
-
+#elif AUDIOTRACK
 #else
         internal SoundEffect(string fileName)
         {
@@ -227,6 +230,7 @@ namespace Microsoft.Xna.Framework.Audio
         }        
 #endif
 
+#if !AUDIOTRACK
         internal SoundEffect(Stream s)
         {
 #if OPENAL
@@ -242,6 +246,7 @@ namespace Microsoft.Xna.Framework.Audio
             _soundEffects.Add(this);
 #endif
         }
+#endif
 
         internal SoundEffect(string name, byte[] buffer, int sampleRate, AudioChannels channels)
             : this(buffer, sampleRate, channels)
@@ -262,6 +267,14 @@ namespace Microsoft.Xna.Framework.Audio
         {
 #if DIRECTX            
             Initialize(new WaveFormat(sampleRate, (int)channels), buffer, 0, buffer.Length, 0, buffer.Length);
+#elif AUDIOTRACK
+            _data = buffer;
+            _sampleRate = sampleRate;
+            _channelConfig = channels == AudioChannels.Mono ? Android.Media.ChannelConfiguration.Mono : Android.Media.ChannelConfiguration.Stereo;
+            // Divide by two due to 16-bit PCM
+            _frames = _data.Length / 2;
+            if (channels == AudioChannels.Stereo)
+                _frames /= 2;
 #elif OPENAL
             _data = buffer;
             Size = buffer.Length;
@@ -329,7 +342,7 @@ namespace Microsoft.Xna.Framework.Audio
                 voice = new SourceVoice(Device, _format, VoiceFlags.None, XAudio2.MaximumFrequencyRatio);
 
             var instance = new SoundEffectInstance(this, voice);
-#elif OPENAL
+#elif OPENAL || AUDIOTRACK
             var instance = new SoundEffectInstance(this);
 #else
             var instance = new SoundEffectInstance();
@@ -338,10 +351,12 @@ namespace Microsoft.Xna.Framework.Audio
             return instance;
         }
 
+#if !AUDIOTRACK
         public static SoundEffect FromStream(Stream stream)
         {            
             return new SoundEffect(stream);
         }
+#endif
 
         #endregion
 
@@ -349,7 +364,7 @@ namespace Microsoft.Xna.Framework.Audio
 
         public bool Play()
         {
-#if OPENAL
+#if OPENAL || AUDIOTRACK
             return Play(MasterVolume, 0.0f, 0.0f);
 #else
             return Play(1.0f, 0.0f, 0.0f);
@@ -360,40 +375,31 @@ namespace Microsoft.Xna.Framework.Audio
         {
             if (isDisposed)
                 throw new ObjectDisposedException(GetType().Name);
-#if DIRECTX || OPENAL
+#if DIRECTX || OPENAL || AUDIOTRACK
             if (MasterVolume > 0.0f)
             {
-                if (_playingInstances == null)
-                {
-                    // Allocate lists first time we need them.
-                    _playingInstances = new List<SoundEffectInstance>();
+                // Allocate lists first time we need them.
+                if (_availableInstances == null)
                     _availableInstances = new List<SoundEffectInstance>();
-                    _toBeRecycledInstances = new List<SoundEffectInstance>();
-                }
-                else
+
+                // Cleanup instances which have finished playing.
+                var count = _playingInstances.Count;
+                for (int i = count - 1; i >= 0; --i)
                 {
-                    // Cleanup instances which have finished playing.                    
-                    foreach (var inst in _playingInstances)
+                    var inst = _playingInstances[i];
+                    if (inst.State == SoundState.Stopped)
                     {
-                        if (inst.State == SoundState.Stopped)
-                        {
-                            _toBeRecycledInstances.Add(inst);
-                        }
-                    }                    
-                }
+#if AUDIOTRACK
+                        inst.Recycle();
+#endif
+                        inst._effect._availableInstances.Add(inst);
+                        _playingInstances.RemoveAt(i);
+                    }
+                }                    
 
                 // Locate a SoundEffectInstance either one already
                 // allocated and not in use or allocate a new one.
                 SoundEffectInstance instance = null;
-                if (_toBeRecycledInstances.Count > 0)
-                {
-                    foreach (var inst in _toBeRecycledInstances)
-                    {
-                        _availableInstances.Add(inst);
-                        _playingInstances.Remove(inst);
-                    }
-                    _toBeRecycledInstances.Clear();
-                }
                 if (_availableInstances.Count > 0)
                 {
                     instance = _availableInstances[0];
@@ -447,6 +453,11 @@ namespace Microsoft.Xna.Framework.Audio
                 var avgBPS = _format.AverageBytesPerSecond;
                 
                 return TimeSpan.FromSeconds((float)sampleCount / (float)avgBPS);
+#elif AUDIOTRACK
+                var sampleCount = _data.Length / 2;
+                if (_channelConfig == Android.Media.ChannelConfiguration.Stereo)
+                    sampleCount /= 2;
+                return TimeSpan.FromSeconds((float)sampleCount / (float)_sampleRate);
 #elif OPENAL
                 return _duration;
 #else
@@ -571,18 +582,16 @@ namespace Microsoft.Xna.Framework.Audio
             {
                 if (disposing)
                 {
-#if DIRECTX || OPENAL
-                    if (_playingInstances != null)
+#if DIRECTX || OPENAL || AUDIOTRACK
+                    int count = _playingInstances.Count;
+                    for (int i = count - 1; i >= 0; --i)
                     {
-                        foreach (var instance in _playingInstances)
-                            instance.Dispose();
-                        _playingInstances = null;
-                    }
-                    if (_toBeRecycledInstances != null)
-                    {
-                        foreach (var instance in _toBeRecycledInstances)
-                            instance.Dispose();
-                        _toBeRecycledInstances = null;
+                        var inst = _playingInstances[i];
+                        if (ReferenceEquals(this, inst._effect))
+                        {
+                            inst.Dispose();
+                            _playingInstances.RemoveAt(i);
+                        }
                     }
                     if (_availableInstances != null)
                     {
@@ -598,6 +607,7 @@ namespace Microsoft.Xna.Framework.Audio
                         _dataStream.Dispose();
                         _dataStream = null;
                     }
+#elif AUDIOTRACK
 #elif !OPENAL
                     if (_sound != null)
                     {
