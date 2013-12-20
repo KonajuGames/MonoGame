@@ -83,6 +83,9 @@ using Microsoft.Xna.Framework.Input.Touch;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Media;
 using Android.Hardware;
+#if OUYA
+using Ouya.Console.Api;
+#endif
 
 namespace Microsoft.Xna.Framework
 {
@@ -95,6 +98,12 @@ namespace Microsoft.Xna.Framework
             AndroidGameActivity.Game = game;
             AndroidGameActivity.Paused += Activity_Paused;
             AndroidGameActivity.Resumed += Activity_Resumed;
+
+#if OUYA
+            OuyaController.Init(Game.Activity);
+#endif
+            // Make the system mouse visibility match the internal state
+            OnIsMouseVisibleChanged();
 
 #if OPENAL
             // Setup our OpenALSoundController to handle our SoundBuffer pools
@@ -272,5 +281,17 @@ namespace Microsoft.Xna.Framework
                 Android.Util.Log.Error("Error in swap buffers", ex.ToString());
             }
         }
+
+        protected override void OnIsMouseVisibleChanged()
+        {
+#if OUYA
+            // Android does not have a way to hide a mouse pointer. If an external pointer
+            // device is connected and interacted with, regular Android will always show a
+            // mouse pointer.  OUYA have provided their own API to hide the mouse pointer
+            // if the user interacts with the touch panel on the controller.
+            OuyaController.ShowCursor(IsMouseVisible);
+#endif
+        }
+
     }
 }
