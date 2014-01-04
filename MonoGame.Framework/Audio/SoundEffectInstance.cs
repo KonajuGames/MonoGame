@@ -67,7 +67,6 @@ namespace Microsoft.Xna.Framework.Audio
         private bool _paused;
         private bool _loop;
 #elif AUDIOTRACK
-        //static System.Collections.Generic.Queue<AudioTrack> _
         static int _numAudioTracks = 0;
         AudioTrack _audioTrack;
         internal SoundEffect _effect;
@@ -272,12 +271,16 @@ namespace Microsoft.Xna.Framework.Audio
                 if (result != TrackStatus.ErrorBadValue && result != TrackStatus.ErrorInvalidOperation)
                 {
                     ++_numAudioTracks;
-                    Android.Util.Log.Debug("Audio", "Number of AudioTrack instances: " + _numAudioTracks.ToString());
-                    _audioTrack.SetStereoVolume(_volume * (_pan > 0.0f ? 1.0f - _pan : 1.0f), _volume * (_pan < 0.0f ? 1.0f + _pan : 1.0f));
+                    float left = _volume * (_pan > 0.0f ? 1.0f - _pan : 1.0f);
+                    float right = _volume * (_pan < 0.0f ? 1.0f + _pan : 1.0f);
+                    _audioTrack.SetStereoVolume(left, right);
                     if (_loop)
                         _audioTrack.SetLoopPoints(0, _effect._frames, -1);
                     if (_pitch != 0.0f)
-                        _audioTrack.SetPlaybackRate((int)((float)_effect._sampleRate * XnaPitchToAlPitch(_pitch)));
+                    {
+                        float convertedPitch = XnaPitchToAlPitch(_pitch);
+                        _audioTrack.SetPlaybackRate((int)((float)_effect._sampleRate * convertedPitch));
+                    }
                     _audioTrack.Play();
                 }
                 else
@@ -403,7 +406,6 @@ namespace Microsoft.Xna.Framework.Audio
         {
             if (_audioTrack != null)
             {
-                Android.Util.Log.Debug("Audio", "SoundEffectInstance recycled");
                 --_numAudioTracks;
                 _audioTrack.Release();
                 _audioTrack.Dispose();
@@ -602,7 +604,12 @@ namespace Microsoft.Xna.Framework.Audio
                 if (clamped != _pan)
                 {
                     _pan = clamped;
-                    _audioTrack.SetStereoVolume(_volume * (_pan > 0.0f ? 1.0f - _pan : 1.0f), _volume * (_pan < 0.0f ? 1.0f + _pan : 1.0f));
+                    if (_audioTrack != null)
+                    {
+                        float left = _volume * (_pan > 0.0f ? 1.0f - _pan : 1.0f);
+                        float right = _volume * (_pan < 0.0f ? 1.0f + _pan : 1.0f);
+                        _audioTrack.SetStereoVolume(left, right);
+                    }
                 }
 #else
                 if ( _sound != null )
@@ -658,7 +665,10 @@ namespace Microsoft.Xna.Framework.Audio
                 {
                     _pitch = clamped;
                     if (_audioTrack != null)
-                        _audioTrack.SetPlaybackRate((int)((float)_effect._sampleRate * XnaPitchToAlPitch(_pitch)));
+                    {
+                        float convertedPitch = XnaPitchToAlPitch(_pitch);
+                        _audioTrack.SetPlaybackRate((int)((float)_effect._sampleRate * convertedPitch));
+                    }
                 }
 #else
                 if ( _sound != null && _sound.Rate != value)
@@ -743,7 +753,11 @@ namespace Microsoft.Xna.Framework.Audio
                 {
                     _volume = clamped;
                     if (_audioTrack != null)
-                        _audioTrack.SetStereoVolume(_volume * (_pan > 0.0f ? 1.0f - _pan : 1.0f), _volume * (_pan < 0.0f ? 1.0f + _pan : 1.0f));
+                    {
+                        float left = _volume * (_pan > 0.0f ? 1.0f - _pan : 1.0f);
+                        float right = _volume * (_pan < 0.0f ? 1.0f + _pan : 1.0f);
+                        _audioTrack.SetStereoVolume(left, right);
+                    }
                 }
 #else
                 if ( _sound != null )
