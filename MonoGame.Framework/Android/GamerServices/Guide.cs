@@ -181,7 +181,7 @@ namespace Microsoft.Xna.Framework.GamerServices
          int focusButton,
          MessageBoxIcon icon);
 
-		public static Nullable<int> ShowMessageBox( string title,
+		public static Nullable<int> ShowMessageBox(string title,
          string text,
          IEnumerable<string> buttons,
          int focusButton,
@@ -191,30 +191,31 @@ namespace Microsoft.Xna.Framework.GamerServices
 			
 			if ( !isMessageBoxShowing )
 			{
-				isMessageBoxShowing = true;	
-	
-				/*UIAlertView alert = new UIAlertView();
-				alert.Title = title;
-				foreach( string btn in buttons )
-				{
-					alert.AddButton(btn);
-				}
-				alert.Message = text;
-				alert.Dismissed += delegate(object sender, UIButtonEventArgs e) 
-								{ 
-									result = e.ButtonIndex;
-									isMessageBoxShowing = false;
-								};
-				alert.Clicked += delegate(object sender, UIButtonEventArgs e) 
-								{ 
-									result = e.ButtonIndex; 
-									isMessageBoxShowing = false;
-								};
-				
-				GetInvokeOnMainThredObj().InvokeOnMainThread(delegate {    
-       		 		alert.Show();   
-    			});*/
-				
+				isMessageBoxShowing = true;
+
+                var b = buttons.ToList();
+
+                var dialog = new AlertDialog.Builder(Game.Activity).Create();
+                dialog.SetTitle(title);
+                dialog.SetMessage(text);
+                dialog.SetButton(b[0], (a, e) =>
+                    {
+                        isMessageBoxShowing = false;
+                        isVisible = false;
+                    });
+                if (b.Count >= 2)
+                    dialog.SetButton2(b[1], (a, e) =>
+                        {
+                            isMessageBoxShowing = false;
+                            isVisible = false;
+                        });
+                if (b.Count >= 3)
+                    dialog.SetButton3(b[2], (a, e) =>
+                        {
+                            isMessageBoxShowing = false;
+                            isVisible = false;
+                        });
+                dialog.Show();
 			}
 			
 			isVisible = isMessageBoxShowing;
