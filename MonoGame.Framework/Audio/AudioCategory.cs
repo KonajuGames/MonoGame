@@ -106,9 +106,13 @@ namespace Microsoft.Xna.Framework.Audio
 				sound.Stop();
 		}
 
-		public void SetVolume(float volume) {
-			foreach (var sound in sounds)
-				sound.Volume = volume;
+		public void SetVolume(float volume)
+        {
+            if (sounds != null)
+            {
+                foreach (var sound in sounds)
+                    sound.Volume = volume;
+            }
 		}
 
         public static bool operator ==(AudioCategory first, AudioCategory second)
