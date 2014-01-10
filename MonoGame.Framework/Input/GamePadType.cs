@@ -37,24 +37,78 @@ permitted under your local laws, the contributors exclude the implied warranties
 purpose and non-infringement.
 */
 #endregion License
-using System;
 
 namespace Microsoft.Xna.Framework.Input
 {
+    /// <summary>
+    /// The type of gamepad device.
+    /// </summary>
 	public enum GamePadType
 	{
-		ArcadeStick = 1,
-		DancePad = 2,
-		FlightStick = 3,
-		Guitar = 4,
-		Unknown = 0,
-		Wheel = 5,
-        AlternateGuitar = 6,
-        BigButtonPad = 7,
-        DrumKit = 8,
-        GamePad = 9,
+        /// <summary>
+        /// Unknown controller
+        /// </summary>
+        Unknown,
+
+        /// <summary>
+        /// Xbox 360 controller
+        /// </summary>
+        GamePad,
+
+        /// <summary>
+        /// Racing wheel controller
+        /// </summary>
+        Wheel,
+
+        /// <summary>
+        /// Arcade stick controller
+        /// </summary>
+        ArcadeStick,
+
+        /// <summary>
+        /// Flight stick controller
+        /// </summary>
+        FlightStick,
+
+        /// <summary>
+        /// Dance pad controller
+        /// </summary>
+        DancePad,
+
+        /// <summary>
+        /// Guitar controller
+        /// </summary>
+		Guitar,
+
+        /// <summary>
+        /// Alternate guitar controller, e.g. bass guitar
+        /// </summary>
+        AlternateGuitar,
+
+        /// <summary>
+        /// Drum kit controller
+        /// </summary>
+        DrumKit,
+
+        /// <summary>
+        /// PS3 controller
+        /// </summary>
+        PS3GamePad,
+
+        /// <summary>
+        /// OUYA controller
+        /// </summary>
+        OuyaGamePad,
+
+        /// <summary>
+        /// MOGA Pro controller
+        /// </summary>
+        MogaProGamePad,
+
+        /// <summary>
+        /// Big Button controller
+        /// </summary>
+        BigButtonPad = 768,
 	}
-
-
 }
 

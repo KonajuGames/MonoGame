@@ -56,6 +56,8 @@ namespace Microsoft.Xna.Framework.Input
         private float _leftTrigger, _rightTrigger;
         private Vector2 _leftStick, _rightStick;
 
+        GamePadType _gamePadType;
+
         // Workaround for the OnKeyUp and OnKeyDown events for KeyCode.Menu 
         // both being sent in a single frame. This can be removed if the
         // OUYA firmware is updated to send these events in different frames. 
@@ -65,6 +67,7 @@ namespace Microsoft.Xna.Framework.Input
 
         private static readonly GamePad[] GamePads = new GamePad[OuyaController.MaxControllers];
 
+        [CLSCompliant(false)]
         protected GamePad(InputDevice device)
         {
             _device = device;
@@ -207,6 +210,7 @@ namespace Microsoft.Xna.Framework.Input
 
         internal static bool OnKeyDown(Keycode keyCode, KeyEvent e)
         {
+            //Android.Util.Log.Debug("OnKeyDown", "keyCode={0}", keyCode);
             var gamePad = GetGamePad(e.Device);
             if (gamePad == null)
                 return false;
@@ -222,6 +226,7 @@ namespace Microsoft.Xna.Framework.Input
 
         internal static bool OnKeyUp(Keycode keyCode, KeyEvent e)
         {
+            //Android.Util.Log.Debug("OnKeyUp", "keyCode={0}", keyCode);
             var gamePad = GetGamePad(e.Device);
             if (gamePad == null)
                 return false;
@@ -232,6 +237,11 @@ namespace Microsoft.Xna.Framework.Input
 
         internal static bool OnGenericMotionEvent(MotionEvent e)
         {
+            //Android.Util.Log.Debug("OnGenericMotionEvent", "Action={0} HatX={1} HatY={2}", e.Action, e.GetAxisValue(Axis.HatX), e.GetAxisValue(Axis.HatY));
+
+            //foreach (var axis in System.Enum.GetValues(typeof(Axis)))
+            //    Android.Util.Log.Debug(((Axis)axis).ToString(), e.GetAxisValue((Axis)axis).ToString());
+
             var gamePad = GetGamePad(e.Device);
             if (gamePad == null)
                 return false;
@@ -239,10 +249,88 @@ namespace Microsoft.Xna.Framework.Input
             if (e.Action != MotionEventActions.Move)
                 return false;
 
+            if (gamePad._capabilities.GamePadType == GamePadType.GamePad)
+            {
+                // Dpad press/release is done through the hat axes for a Xbox 360 controller
+                float x = e.GetAxisValue(Axis.HatX);
+                float y = e.GetAxisValue(Axis.HatY);
+
+                // Dpad left/right
+                if (x < 0.0f)
+                {
+                    gamePad._buttons &= ~Buttons.DPadRight;
+                    gamePad._buttons |= Buttons.DPadLeft;
+                }
+                else if (x > 0.0f)
+                {
+                    gamePad._buttons &= ~Buttons.DPadLeft;
+                    gamePad._buttons |= Buttons.DPadRight;
+                }
+                else
+                {
+                    gamePad._buttons &= ~(Buttons.DPadLeft | Buttons.DPadRight);
+                }
+
+                // Dpad up/down
+                if (y < 0.0f)
+                {
+                    gamePad._buttons &= ~Buttons.DPadDown;
+                    gamePad._buttons |= Buttons.DPadUp;
+                }
+                else if (y > 0.0f)
+                {
+                    gamePad._buttons &= ~Buttons.DPadUp;
+                    gamePad._buttons |= Buttons.DPadDown;
+                }
+                else
+                {
+                    gamePad._buttons &= ~(Buttons.DPadUp | Buttons.DPadDown);
+                }
+            }
+
             gamePad._leftStick = new Vector2(e.GetAxisValue(Axis.X), -e.GetAxisValue(Axis.Y));
             gamePad._rightStick = new Vector2(e.GetAxisValue(Axis.Z), -e.GetAxisValue(Axis.Rz));
+
             gamePad._leftTrigger = e.GetAxisValue(Axis.Ltrigger);
             gamePad._rightTrigger = e.GetAxisValue(Axis.Rtrigger);
+
+            gamePad._buttons &= ~(
+                Buttons.LeftTrigger
+                | Buttons.RightTrigger
+                | Buttons.LeftThumbstickUp
+                | Buttons.LeftThumbstickDown
+                | Buttons.LeftThumbstickLeft
+                | Buttons.LeftThumbstickRight
+                | Buttons.RightThumbstickUp
+                | Buttons.RightThumbstickDown
+                | Buttons.RightThumbstickLeft
+                | Buttons.RightThumbstickRight
+                );
+
+            if (gamePad._leftStick.X < -0.95f)
+                gamePad._buttons |= Buttons.LeftThumbstickLeft;
+            else if (gamePad._leftStick.X > 0.95f)
+                gamePad._buttons |= Buttons.LeftThumbstickRight;
+
+            if (gamePad._leftStick.Y < -0.95f)
+                gamePad._buttons |= Buttons.LeftThumbstickUp;
+            else if (gamePad._leftStick.Y > 0.95f)
+                gamePad._buttons |= Buttons.LeftThumbstickDown;
+
+            if (gamePad._rightStick.X < -0.95f)
+                gamePad._buttons |= Buttons.RightThumbstickLeft;
+            else if (gamePad._rightStick.X > 0.95f)
+                gamePad._buttons |= Buttons.RightThumbstickRight;
+
+            if (gamePad._rightStick.Y < -0.95f)
+                gamePad._buttons |= Buttons.RightThumbstickUp;
+            else if (gamePad._rightStick.Y > 0.95f)
+                gamePad._buttons |= Buttons.RightThumbstickDown;
+
+            if (gamePad._leftTrigger > 0.95f)
+                gamePad._buttons |= Buttons.LeftTrigger;
+            if (gamePad._rightTrigger > 0.95f)
+                gamePad._buttons |= Buttons.RightTrigger;
 
             return true;
         }
@@ -313,6 +401,7 @@ namespace Microsoft.Xna.Framework.Input
             switch (device.Name)
             {
                 case "OUYA Game Controller":
+                    capabilities.GamePadType = GamePadType.OuyaGamePad;
 
                     capabilities.HasAButton = true;
                     capabilities.HasBButton = true;
@@ -336,6 +425,35 @@ namespace Microsoft.Xna.Framework.Input
                     break;
 
                 case "Microsoft X-Box 360 pad":
+                    capabilities.GamePadType = GamePadType.GamePad;
+
+                    capabilities.HasAButton = true;
+                    capabilities.HasBButton = true;
+                    capabilities.HasXButton = true;
+                    capabilities.HasYButton = true;
+
+                    capabilities.HasLeftXThumbStick = true;
+                    capabilities.HasLeftYThumbStick = true;
+                    capabilities.HasRightXThumbStick = true;
+                    capabilities.HasRightYThumbStick = true;
+
+                    capabilities.HasLeftShoulderButton = true;
+                    capabilities.HasRightShoulderButton = true;
+                    capabilities.HasLeftTrigger = true;
+                    capabilities.HasRightTrigger = true;
+
+                    capabilities.HasDPadDownButton = true;
+                    capabilities.HasDPadLeftButton = true;
+                    capabilities.HasDPadRightButton = true;
+                    capabilities.HasDPadUpButton = true;
+
+                    capabilities.HasStartButton = true;
+                    capabilities.HasBackButton = true;
+                    break;
+
+                case "PS3":
+                    capabilities.GamePadType = GamePadType.PS3GamePad;
+
                     capabilities.HasAButton = true;
                     capabilities.HasBButton = true;
                     capabilities.HasXButton = true;
@@ -362,7 +480,6 @@ namespace Microsoft.Xna.Framework.Input
             }
             return capabilities;
         }
-
 
         internal static void Initialize()
         {
