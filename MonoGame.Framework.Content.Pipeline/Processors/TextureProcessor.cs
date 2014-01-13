@@ -8,27 +8,54 @@ using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
 
 namespace Microsoft.Xna.Framework.Content.Pipeline.Processors
 {
-    [ContentProcessor(DisplayName="Texture - MonoGame")]
+    /// <summary>
+    /// Processes textures into a format for easy loading on the target platform.
+    /// </summary>
+    [ContentProcessor(DisplayName = "Texture - MonoGame")]
     public class TextureProcessor : ContentProcessor<TextureContent, TextureContent>
     {
-        public TextureProcessor()
-        {
-            PremultiplyAlpha = true;
-        }
+        Color _colorKeyColor = Color.Magenta;
+        /// <summary>
+        /// Pixels matching this color are converted to transparent black if ColorKeyEnabled is true.
+        /// </summary>
+        [DefaultValueAttribute(typeof(Color), "255, 0, 255, 255")]
+        public virtual Color ColorKeyColor { get { return _colorKeyColor; } set { _colorKeyColor = value; } }
 
-        public virtual Color ColorKeyColor { get; set; }
+        bool _colorKeyEnabled = true;
+        /// <summary>
+        /// If enabled, pixels matching ColorKeyColor are converted to transparent black.
+        /// </summary>
+        [DefaultValueAttribute(true)]
+        public virtual bool ColorKeyEnabled { get { return _colorKeyEnabled; } set { _colorKeyEnabled = value; } }
 
-        public virtual bool ColorKeyEnabled { get; set; }
-
+        /// <summary>
+        /// Generates all mipmap levels for the texture.
+        /// </summary>
         public virtual bool GenerateMipmaps { get; set; }
 
+        bool _premultiplyAlpha = true;
+        /// <summary>
+        /// Convertes the texture to a pre-multipled alpha format.
+        /// </summary>
         [DefaultValueAttribute(true)]
-        public virtual bool PremultiplyAlpha { get; set; }
+        public virtual bool PremultiplyAlpha { get { return _premultiplyAlpha; } set { _premultiplyAlpha = value; } }
 
+        /// <summary>
+        /// Resizes the texture if required so both dimensions are a power of two.
+        /// </summary>
         public virtual bool ResizeToPowerOfTwo { get; set; }
 
+        /// <summary>
+        /// The format of the exported texture.
+        /// </summary>
         public virtual TextureProcessorOutputFormat TextureFormat { get; set; }
 
+        /// <summary>
+        /// Prcoess the input texture to a format suitable for loading on the target platform.
+        /// </summary>
+        /// <param name="input">The texture to process.</param>
+        /// <param name="context">The context of the processor.</param>
+        /// <returns>The processed texture.</returns>
         public override TextureContent Process(TextureContent input, ContentProcessorContext context)
         {
             if (ColorKeyEnabled)
