@@ -319,7 +319,6 @@ namespace Microsoft.Xna.Framework.Input
                 gamePad._leftTrigger = 0.0f;
             if (Math.Abs(gamePad._rightTrigger) < Epsilon)
                 gamePad._rightTrigger = 0.0f;
-            Android.Util.Log.Debug("Gamepad", "{0} {1} {2} {3}", gamePad._leftStick, gamePad._rightStick, gamePad._leftTrigger, gamePad._rightTrigger);
 
             // Converting left and right analog stick to button presses
             if (gamePad._leftStick.X < -PressedThreshold)
