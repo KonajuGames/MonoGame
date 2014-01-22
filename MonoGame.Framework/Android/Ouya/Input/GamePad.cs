@@ -47,10 +47,8 @@ namespace Microsoft.Xna.Framework.Input
 {
     public class GamePad
     {
-        // Pressed and released thresholds for converting analog values to button presses.
-        // The hysteresis between the thresholds serves to debounce the input.
-        const float PressedThreshold = 0.25f;
-        const float ReleasedThreshold = 0.20f;
+        const float PressedThreshold = 0.10f;
+        const float Epsilon = 0.01f;
 
         internal InputDevice _device;
         internal int _deviceId;
@@ -60,8 +58,6 @@ namespace Microsoft.Xna.Framework.Input
         private Buttons _buttons;
         private float _leftTrigger, _rightTrigger;
         private Vector2 _leftStick, _rightStick;
-
-        GamePadType _gamePadType;
 
         // Workaround for the OnKeyUp and OnKeyDown events for KeyCode.Menu 
         // both being sent in a single frame. This can be removed if the
@@ -299,52 +295,58 @@ namespace Microsoft.Xna.Framework.Input
             gamePad._leftTrigger = e.GetAxisValue(Axis.Ltrigger);
             gamePad._rightTrigger = e.GetAxisValue(Axis.Rtrigger);
 
+            gamePad._buttons &= ~(Buttons.LeftThumbstickLeft
+                | Buttons.LeftThumbstickRight
+                | Buttons.LeftThumbstickUp
+                | Buttons.LeftThumbstickDown
+                | Buttons.RightThumbstickRight
+                | Buttons.RightThumbstickRight
+                | Buttons.RightThumbstickUp
+                | Buttons.RightThumbstickDown
+                | Buttons.LeftTrigger
+                | Buttons.RightTrigger
+                );
+
+            if (Math.Abs(gamePad._leftStick.X) < Epsilon)
+                gamePad._leftStick.X = 0.0f;
+            if (Math.Abs(gamePad._leftStick.Y) < Epsilon)
+                gamePad._leftStick.Y = 0.0f;
+            if (Math.Abs(gamePad._rightStick.X) < Epsilon)
+                gamePad._rightStick.X = 0.0f;
+            if (Math.Abs(gamePad._rightStick.Y) < Epsilon)
+                gamePad._rightStick.Y = 0.0f;
+            if (Math.Abs(gamePad._leftTrigger) < Epsilon)
+                gamePad._leftTrigger = 0.0f;
+            if (Math.Abs(gamePad._rightTrigger) < Epsilon)
+                gamePad._rightTrigger = 0.0f;
+            Android.Util.Log.Debug("Gamepad", "{0} {1} {2} {3}", gamePad._leftStick, gamePad._rightStick, gamePad._leftTrigger, gamePad._rightTrigger);
+
             // Converting left and right analog stick to button presses
             if (gamePad._leftStick.X < -PressedThreshold)
                 gamePad._buttons |= Buttons.LeftThumbstickLeft;
             else if (gamePad._leftStick.X > PressedThreshold)
                 gamePad._buttons |= Buttons.LeftThumbstickRight;
-            if (gamePad._leftStick.X > -ReleasedThreshold)
-                gamePad._buttons &= ~Buttons.LeftThumbstickLeft;
-            else if (gamePad._leftStick.X < ReleasedThreshold)
-                gamePad._buttons &= ~Buttons.LeftThumbstickRight;
 
             if (gamePad._leftStick.Y < -PressedThreshold)
-                gamePad._buttons |= Buttons.LeftThumbstickUp;
-            else if (gamePad._leftStick.Y > PressedThreshold)
                 gamePad._buttons |= Buttons.LeftThumbstickDown;
-            if (gamePad._leftStick.Y > -ReleasedThreshold)
-                gamePad._buttons &= ~Buttons.LeftThumbstickUp;
-            else if (gamePad._leftStick.Y < ReleasedThreshold)
-                gamePad._buttons &= ~Buttons.LeftThumbstickDown;
+            else if (gamePad._leftStick.Y > PressedThreshold)
+                gamePad._buttons |= Buttons.LeftThumbstickUp;
 
             if (gamePad._rightStick.X < -PressedThreshold)
                 gamePad._buttons |= Buttons.RightThumbstickLeft;
             else if (gamePad._rightStick.X > PressedThreshold)
                 gamePad._buttons |= Buttons.RightThumbstickRight;
-            if (gamePad._rightStick.X > -ReleasedThreshold)
-                gamePad._buttons &= ~Buttons.RightThumbstickLeft;
-            else if (gamePad._rightStick.X < ReleasedThreshold)
-                gamePad._buttons &= ~Buttons.RightThumbstickRight;
 
             if (gamePad._rightStick.Y < -PressedThreshold)
-                gamePad._buttons |= Buttons.RightThumbstickUp;
-            else if (gamePad._rightStick.Y > PressedThreshold)
                 gamePad._buttons |= Buttons.RightThumbstickDown;
-            if (gamePad._rightStick.Y > -ReleasedThreshold)
-                gamePad._buttons &= ~Buttons.RightThumbstickUp;
-            else if (gamePad._rightStick.Y < ReleasedThreshold)
-                gamePad._buttons &= ~Buttons.RightThumbstickDown;
+            else if (gamePad._rightStick.Y > PressedThreshold)
+                gamePad._buttons |= Buttons.RightThumbstickUp;
 
             // Converting triggers to button presses
             if (gamePad._leftTrigger > PressedThreshold)
                 gamePad._buttons |= Buttons.LeftTrigger;
-            else if (gamePad._leftTrigger < ReleasedThreshold)
-                gamePad._buttons &= ~Buttons.LeftTrigger;
             if (gamePad._rightTrigger > PressedThreshold)
                 gamePad._buttons |= Buttons.RightTrigger;
-            else if (gamePad._rightTrigger < ReleasedThreshold)
-                gamePad._buttons &= ~Buttons.RightTrigger;
 
             return true;
         }
