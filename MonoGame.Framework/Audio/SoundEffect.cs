@@ -395,7 +395,7 @@ namespace Microsoft.Xna.Framework.Audio
                         inst._effect._availableInstances.Add(inst);
                         _playingInstances.RemoveAt(i);
                     }
-                }                    
+                }
 
                 // Locate a SoundEffectInstance either one already
                 // allocated and not in use or allocate a new one.
@@ -415,11 +415,18 @@ namespace Microsoft.Xna.Framework.Audio
                 instance.Volume = volume;
                 instance.Pitch = pitch;
                 instance.Pan = pan;
-                instance.Play();
+                try
+                {
+                    instance.Play();
+                }
+                catch (InstancePlayLimitException)
+                {
+                    _playingInstances.Remove(instance);
+                    _availableInstances.Add(instance);
+                    return false;
+                }
             }
 
-            // XNA documentation says this method returns false if the sound limit
-            // has been reached. However, there is no limit on PC.
             return true;
 #else
             if ( MasterVolume > 0.0f )

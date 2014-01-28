@@ -67,7 +67,6 @@ namespace Microsoft.Xna.Framework.Audio
         private bool _paused;
         private bool _loop;
 #elif AUDIOTRACK
-        static int _numAudioTracks = 0;
         AudioTrack _audioTrack;
         internal SoundEffect _effect;
         float _volume;
@@ -168,7 +167,6 @@ namespace Microsoft.Xna.Framework.Audio
 #elif AUDIOTRACK
                     if (_audioTrack != null)
                     {
-                        --_numAudioTracks;
                         _audioTrack.Release();
                         _audioTrack.Dispose();
                         _audioTrack = null;
@@ -246,6 +244,13 @@ namespace Microsoft.Xna.Framework.Audio
         {
             if (State == SoundState.Playing)
                 return;
+
+            if (State == SoundState.Paused)
+            {
+                Resume();
+                return;
+            }
+
 #if DIRECTX
             if (_voice != null)
             {
@@ -267,10 +272,9 @@ namespace Microsoft.Xna.Framework.Audio
             if (_audioTrack == null)
             {
                 _audioTrack = new AudioTrack(Stream.Music, _effect._sampleRate, _effect._channelConfig, Encoding.Pcm16bit, _effect._data.Length, AudioTrackMode.Static);
-                TrackStatus result = (TrackStatus)_audioTrack.Write(_effect._data, 0, _effect._data.Length);
-                if (result != TrackStatus.ErrorBadValue && result != TrackStatus.ErrorInvalidOperation)
+                var bytesWritten = _audioTrack.Write(_effect._data, 0, _effect._data.Length);
+                if (bytesWritten > 0)
                 {
-                    ++_numAudioTracks;
                     float left = _volume * (_pan > 0.0f ? 1.0f - _pan : 1.0f);
                     float right = _volume * (_pan < 0.0f ? 1.0f + _pan : 1.0f);
                     _audioTrack.SetStereoVolume(left, right);
@@ -288,6 +292,7 @@ namespace Microsoft.Xna.Framework.Audio
                     _audioTrack.Release();
                     _audioTrack.Dispose();
                     _audioTrack = null;
+                    throw new InstancePlayLimitException();
                 }
             }
             else
@@ -406,7 +411,6 @@ namespace Microsoft.Xna.Framework.Audio
         {
             if (_audioTrack != null)
             {
-                --_numAudioTracks;
                 _audioTrack.Release();
                 _audioTrack.Dispose();
                 _audioTrack = null;
