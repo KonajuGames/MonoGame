@@ -56,6 +56,7 @@ namespace Microsoft.Xna.Framework.Audio
 	public class SoundEffectInstance : IDisposable
 	{
 		private bool isDisposed = false;
+        internal bool _autoCreated;
 #if !DIRECTX && !AUDIOTRACK
         private SoundState soundState = SoundState.Stopped;
 #endif
@@ -285,7 +286,10 @@ namespace Microsoft.Xna.Framework.Audio
                         float convertedPitch = XnaPitchToAlPitch(_pitch);
                         _audioTrack.SetPlaybackRate((int)((float)_effect._sampleRate * convertedPitch));
                     }
+                    Android.Util.Log.Debug("AudioTrack", "Playing");
                     _audioTrack.Play();
+                    if (!_autoCreated)
+                        SoundEffect._playingInstances.Add(this);
                 }
                 else
                 {
@@ -300,6 +304,8 @@ namespace Microsoft.Xna.Framework.Audio
                 if (_audioTrack.PlayState == PlayState.Stopped)
                     _audioTrack.ReloadStaticData();
                 _audioTrack.Play();
+                if (!_autoCreated)
+                    SoundEffect._playingInstances.Add(this);
             }
 #else
             if ( _sound != null )
@@ -373,7 +379,10 @@ namespace Microsoft.Xna.Framework.Audio
             if (_audioTrack != null)
             {
                 if (_audioTrack.PlayState != PlayState.Stopped)
+                {
                     _audioTrack.Stop();
+                    Recycle();
+                }
             }
 #else
             if ( _sound != null )
@@ -395,7 +404,10 @@ namespace Microsoft.Xna.Framework.Audio
             if (_audioTrack != null)
             {
                 if (_audioTrack.PlayState != PlayState.Stopped)
+                {
                     _audioTrack.Stop();
+                    Recycle();
+                }
             }
 #else
             if ( _sound != null )
@@ -411,6 +423,7 @@ namespace Microsoft.Xna.Framework.Audio
         {
             if (_audioTrack != null)
             {
+                Android.Util.Log.Debug("AudioTrack", "Released and freed");
                 _audioTrack.Release();
                 _audioTrack.Dispose();
                 _audioTrack = null;

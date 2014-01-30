@@ -76,7 +76,7 @@ namespace Microsoft.Xna.Framework.Audio
 #if DIRECTX || OPENAL || AUDIOTRACK
         // These three fields are used for keeping track of instances created
         // internally when Play is called directly on SoundEffect.
-        static private List<SoundEffectInstance> _playingInstances = new List<SoundEffectInstance>(64);
+        static internal List<SoundEffectInstance> _playingInstances = new List<SoundEffectInstance>(64);
         private List<SoundEffectInstance> _availableInstances;
 #endif
 
@@ -389,11 +389,12 @@ namespace Microsoft.Xna.Framework.Audio
                     var inst = _playingInstances[i];
                     if (inst.State == SoundState.Stopped)
                     {
+                        if (!inst._autoCreated)
+                            inst._effect._availableInstances.Add(inst);
+                        _playingInstances.RemoveAt(i);
 #if AUDIOTRACK
                         inst.Recycle();
 #endif
-                        inst._effect._availableInstances.Add(inst);
-                        _playingInstances.RemoveAt(i);
                     }
                 }
 
@@ -409,6 +410,7 @@ namespace Microsoft.Xna.Framework.Audio
                 else
                 {
                     instance = CreateInstance();
+                    instance._autoCreated = true;
                     _playingInstances.Add(instance);
                 }
 
