@@ -387,9 +387,13 @@ namespace Microsoft.Xna.Framework.Audio
                 for (int i = count - 1; i >= 0; --i)
                 {
                     var inst = _playingInstances[i];
-                    if (inst.State == SoundState.Stopped)
+                    if (inst.IsDisposed)
                     {
-                        if (!inst._autoCreated)
+                        _playingInstances.RemoveAt(i);
+                    }
+                    else if (inst.State == SoundState.Stopped)
+                    {
+                        if (inst._autoCreated)
                             inst._effect._availableInstances.Add(inst);
                         _playingInstances.RemoveAt(i);
 #if AUDIOTRACK
