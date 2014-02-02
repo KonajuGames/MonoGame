@@ -39,7 +39,7 @@ purpose and non-infringement.
 #endregion License
 
 #if ANDROID
-#define TRACK_SOUNDEFFECTS
+//#define TRACK_SOUNDEFFECTS
 #endif
 ﻿
 using System;
@@ -57,6 +57,10 @@ using SharpDX.Multimedia;
 using SharpDX.X3DAudio;
 #elif OPENAL
 using OpenTK.Audio.OpenAL;
+#elif AUDIOTRACK
+using Android.Media;
+using System.Threading.Tasks;
+using System.Threading;
 #endif
 
 namespace Microsoft.Xna.Framework.Audio
@@ -74,7 +78,7 @@ namespace Microsoft.Xna.Framework.Audio
 #endif
 
 #if DIRECTX || OPENAL || AUDIOTRACK
-        // These three fields are used for keeping track of instances created
+        // These fields are used for keeping track of instances created
         // internally when Play is called directly on SoundEffect.
         static internal List<SoundEffectInstance> _playingInstances = new List<SoundEffectInstance>(64);
         private List<SoundEffectInstance> _availableInstances;
@@ -86,10 +90,8 @@ namespace Microsoft.Xna.Framework.Audio
         internal AudioBuffer _loopedBuffer;
         internal WaveFormat _format;
 #else
-        private string _filename = "";
-        internal byte[] _data;
-
 #if OPENAL
+        internal byte[] _data;
 
         // OpenAL-specific information
 
@@ -111,10 +113,16 @@ namespace Microsoft.Xna.Framework.Audio
             set;
         }
 #elif AUDIOTRACK
+        internal short[] _data;
         internal int _sampleRate;
-        internal Android.Media.ChannelConfiguration _channelConfig;
+        internal AudioChannels _channels;
         internal int _frames;
+
+        static Task _mixerTask;
+        static CancellationToken _mixerCancellationToken;
 #else
+        internal byte[] _data;
+        private string _filename = "";
         private Sound _sound;
         private SoundEffectInstance _instance;
 #endif
@@ -129,8 +137,109 @@ namespace Microsoft.Xna.Framework.Audio
         {
 #if DIRECTX
             InitializeSoundEffect();
+#elif AUDIOTRACK
+            _mixerTask = Task.Factory.StartNew(MixerTask, _mixerCancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Current);
 #endif
         }
+
+#if AUDIOTRACK
+        static void MixerTask()
+        {
+            int sampleRate = 22050;
+            var nativeSampleRate = AudioTrack.GetNativeOutputSampleRate(Android.Media.Stream.Music);
+            var bufferSizeBytes = AudioTrack.GetMinBufferSize(sampleRate, ChannelOut.Mono, Encoding.Pcm16bit);
+            var bufferSize = bufferSizeBytes / 4;
+            Android.Util.Log.Debug("Mixer", "Mixer starting with buffer of {0} samples. Native sample rate {1}", bufferSize, nativeSampleRate);
+            var audioTrack = new AudioTrack(Android.Media.Stream.Music, sampleRate, ChannelConfiguration.Mono, Encoding.Pcm16bit, bufferSizeBytes, AudioTrackMode.Stream);
+            var buffer0 = new short[bufferSize];
+            var buffer1 = new short[bufferSize];
+            var currentBuffer = buffer1;
+            int index = 1;
+            Array.Clear(buffer0, 0, bufferSize);
+            audioTrack.Play();
+            audioTrack.Write(buffer0, 0, bufferSize);
+            while (!_mixerCancellationToken.IsCancellationRequested)
+            {
+                Array.Clear(currentBuffer, 0, bufferSize);
+                lock (_playingInstances)
+                {
+                    Android.Util.Log.Debug("Mixer", "Feeding the buffer. {0} playing instances", _playingInstances.Count);
+                    // Iterate backwards so we can remove instances if they finish
+                    for (int i = _playingInstances.Count - 1; i >= 0; --i)
+                    {
+                        var inst = _playingInstances[i];
+                        switch (inst.soundState)
+                        {
+                            case SoundState.Playing:
+                                if (inst._effect._channels == AudioChannels.Mono)
+                                {
+                                    var samplesToMix = inst._effect._frames - inst._position;
+                                    if (samplesToMix > bufferSize)
+                                        samplesToMix = bufferSize;
+                                    if (samplesToMix > 0)
+                                    {
+                                        var data = inst._effect._data;
+                                        for (int s = 0; s < samplesToMix; ++s)
+                                        {
+                                            short sample = data[inst._position + s];
+                                            currentBuffer[s] += sample;
+                                        }
+                                        inst._position += samplesToMix;
+                                    }
+
+                                    if (inst._position == inst._effect._frames)
+                                    {
+                                        if (inst._loop)
+                                        {
+                                            // Start back at the beginning of the sample data and fill the rest of the buffer
+                                            inst._position = 0;
+                                            var data = inst._effect._data;
+                                            samplesToMix = bufferSize - samplesToMix;
+                                            for (int s = 0; s < samplesToMix; ++s)
+                                            {
+                                                short sample = data[s];
+                                                currentBuffer[samplesToMix + s] += sample;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Android.Util.Log.Debug("Mixer", "Instance {0} finished", inst._effect._name);
+                                            // Instance has finished, so remove it
+                                            _playingInstances.RemoveAt(i);
+                                            // Auto-created instances are returned to a pool for use again later
+                                            if (inst._autoCreated)
+                                                inst._effect._availableInstances.Add(inst);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    // Stereo samples
+                                    // ...
+                                }
+                                break;
+                            case SoundState.Stopped:
+                                Android.Util.Log.Debug("Mixer", "Instance {0} stopped", inst._effect._name);
+                                // Instance has finished, so remove it
+                                _playingInstances.RemoveAt(i);
+                                // Auto-created instances are returned to a pool for use again later
+                                if (inst._autoCreated)
+                                    inst._effect._availableInstances.Add(inst);
+                                break;
+                        }
+                    }
+                }
+                //writeTask.Wait();
+                audioTrack.Write(currentBuffer, 0, bufferSize);
+                index = 1 - index;
+                currentBuffer = index == 0 ? buffer0 : buffer1;
+            }
+            Android.Util.Log.Debug("Mixer", "Mixer terminating");
+            audioTrack.Stop();
+            audioTrack.Release();
+            audioTrack.Dispose();
+        }
+#endif
 
 #if DIRECTX
         internal SoundEffect()
@@ -252,6 +361,7 @@ namespace Microsoft.Xna.Framework.Audio
             : this(buffer, sampleRate, channels)
         {
             _name = name;
+            Android.Util.Log.Debug("SoundEffect", "{0} {1} {2}", name, sampleRate, channels);
         }
 
         ~SoundEffect()
@@ -268,9 +378,11 @@ namespace Microsoft.Xna.Framework.Audio
 #if DIRECTX            
             Initialize(new WaveFormat(sampleRate, (int)channels), buffer, 0, buffer.Length, 0, buffer.Length);
 #elif AUDIOTRACK
-            _data = buffer;
+            int sampleCount = buffer.Length / 2;
+            _data = new short[sampleCount];
+            Buffer.BlockCopy(buffer, 0, _data, 0, buffer.Length);
             _sampleRate = sampleRate;
-            _channelConfig = channels == AudioChannels.Mono ? Android.Media.ChannelConfiguration.Mono : Android.Media.ChannelConfiguration.Stereo;
+            _channels = channels;
             // Divide by two due to 16-bit PCM
             _frames = _data.Length / 2;
             if (channels == AudioChannels.Stereo)
@@ -382,6 +494,7 @@ namespace Microsoft.Xna.Framework.Audio
                 if (_availableInstances == null)
                     _availableInstances = new List<SoundEffectInstance>();
 
+#if !AUDIOTRACK
                 // Cleanup instances which have finished playing.
                 var count = _playingInstances.Count;
                 for (int i = count - 1; i >= 0; --i)
@@ -396,11 +509,9 @@ namespace Microsoft.Xna.Framework.Audio
                         if (inst._autoCreated)
                             inst._effect._availableInstances.Add(inst);
                         _playingInstances.RemoveAt(i);
-#if AUDIOTRACK
-                        inst.Recycle();
-#endif
                     }
                 }
+#endif
 
                 // Locate a SoundEffectInstance either one already
                 // allocated and not in use or allocate a new one.
@@ -468,7 +579,7 @@ namespace Microsoft.Xna.Framework.Audio
                 return TimeSpan.FromSeconds((float)sampleCount / (float)avgBPS);
 #elif AUDIOTRACK
                 var sampleCount = _data.Length / 2;
-                if (_channelConfig == Android.Media.ChannelConfiguration.Stereo)
+                if (_channels == AudioChannels.Stereo)
                     sampleCount /= 2;
                 return TimeSpan.FromSeconds((float)sampleCount / (float)_sampleRate);
 #elif OPENAL
