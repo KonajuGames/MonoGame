@@ -286,10 +286,9 @@ namespace Microsoft.Xna.Framework.Audio
                         float convertedPitch = XnaPitchToAlPitch(_pitch);
                         _audioTrack.SetPlaybackRate((int)((float)_effect._sampleRate * convertedPitch));
                     }
-                    Android.Util.Log.Debug("AudioTrack", "Playing");
+                    Android.Util.Log.Debug("AudioTrack", "Playing {0}", _effect.Name);
                     _audioTrack.Play();
-                    if (!_autoCreated)
-                        SoundEffect._playingInstances.Add(this);
+                    SoundEffect._playingInstances.Add(this);
                 }
                 else
                 {
@@ -304,8 +303,7 @@ namespace Microsoft.Xna.Framework.Audio
                 if (_audioTrack.PlayState == PlayState.Stopped)
                     _audioTrack.ReloadStaticData();
                 _audioTrack.Play();
-                if (!_autoCreated)
-                    SoundEffect._playingInstances.Add(this);
+                SoundEffect._playingInstances.Add(this);
             }
 #else
             if ( _sound != null )
@@ -423,7 +421,7 @@ namespace Microsoft.Xna.Framework.Audio
         {
             if (_audioTrack != null)
             {
-                Android.Util.Log.Debug("AudioTrack", "Released and freed");
+                Android.Util.Log.Debug("AudioTrack", "Released {0}", _effect.Name);
                 _audioTrack.Release();
                 _audioTrack.Dispose();
                 _audioTrack = null;
@@ -719,7 +717,7 @@ namespace Microsoft.Xna.Framework.Audio
                         case PlayState.Paused:
                             return SoundState.Paused;
                         case PlayState.Playing:
-                            if (_audioTrack.PlaybackHeadPosition < _effect._frames)
+                            if (_audioTrack.PlaybackHeadPosition < _effect._frames - 2)
                                 return SoundState.Playing;
                             return SoundState.Stopped;
                     }

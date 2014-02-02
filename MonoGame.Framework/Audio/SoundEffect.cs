@@ -401,7 +401,7 @@ namespace Microsoft.Xna.Framework.Audio
 #endif
                     }
                 }
-
+                Android.Util.Log.Debug("SoundEffect", "{0} playing instances", _playingInstances.Count);
                 // Locate a SoundEffectInstance either one already
                 // allocated and not in use or allocate a new one.
                 SoundEffectInstance instance = null;
