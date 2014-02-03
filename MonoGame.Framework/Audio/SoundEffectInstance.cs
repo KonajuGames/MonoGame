@@ -74,6 +74,8 @@ namespace Microsoft.Xna.Framework.Audio
         bool _loop;
         float _pan;
         float _pitch;
+        static int _idGen = 0;
+        internal int _id;
 #else
         private Sound _sound;
 		internal Sound Sound 
@@ -100,6 +102,8 @@ namespace Microsoft.Xna.Framework.Audio
         internal SoundEffectInstance(SoundEffect soundEffect)
         {
             _effect = soundEffect;
+            _id = _idGen;
+            ++_idGen;
         }
 #else
         internal SoundEffectInstance()
@@ -244,7 +248,10 @@ namespace Microsoft.Xna.Framework.Audio
 		public void Play()
         {
             if (State == SoundState.Playing)
+            {
+                Android.Util.Log.Debug("AudioTrack", "Already playing {0} (instance {1})", _effect.Name, _id);
                 return;
+            }
 
             if (State == SoundState.Paused)
             {
@@ -270,6 +277,10 @@ namespace Microsoft.Xna.Framework.Audio
 
 		    _paused = false;
 #elif AUDIOTRACK
+            if (SoundEffect._playingInstances.Count >= 16)
+            {
+                throw new InstancePlayLimitException();
+            }
             if (_audioTrack == null)
             {
                 _audioTrack = new AudioTrack(Stream.Music, _effect._sampleRate, _effect._channelConfig, Encoding.Pcm16bit, _effect._data.Length, AudioTrackMode.Static);
@@ -286,7 +297,7 @@ namespace Microsoft.Xna.Framework.Audio
                         float convertedPitch = XnaPitchToAlPitch(_pitch);
                         _audioTrack.SetPlaybackRate((int)((float)_effect._sampleRate * convertedPitch));
                     }
-                    Android.Util.Log.Debug("AudioTrack", "Playing {0}", _effect.Name);
+                    Android.Util.Log.Debug("AudioTrack", "Playing {0} (instance {1})", _effect.Name, _id);
                     _audioTrack.Play();
                     SoundEffect._playingInstances.Add(this);
                 }
@@ -421,7 +432,6 @@ namespace Microsoft.Xna.Framework.Audio
         {
             if (_audioTrack != null)
             {
-                Android.Util.Log.Debug("AudioTrack", "Released {0}", _effect.Name);
                 _audioTrack.Release();
                 _audioTrack.Dispose();
                 _audioTrack = null;

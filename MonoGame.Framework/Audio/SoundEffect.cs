@@ -378,44 +378,32 @@ namespace Microsoft.Xna.Framework.Audio
 #if DIRECTX || OPENAL || AUDIOTRACK
             if (MasterVolume > 0.0f)
             {
-                // Allocate lists first time we need them.
-                if (_availableInstances == null)
-                    _availableInstances = new List<SoundEffectInstance>();
-
-                // Cleanup instances which have finished playing.
-                var count = _playingInstances.Count;
-                for (int i = count - 1; i >= 0; --i)
-                {
-                    var inst = _playingInstances[i];
-                    if (inst.IsDisposed)
-                    {
-                        _playingInstances.RemoveAt(i);
-                    }
-                    else if (inst.State == SoundState.Stopped)
-                    {
-                        if (inst._autoCreated)
-                            inst._effect._availableInstances.Add(inst);
-                        _playingInstances.RemoveAt(i);
-#if AUDIOTRACK
-                        inst.Recycle();
-#endif
-                    }
-                }
                 Android.Util.Log.Debug("SoundEffect", "{0} playing instances", _playingInstances.Count);
+#if AUDIOTRACK
+                if (_playingInstances.Count >= 16)
+                {
+                    Android.Util.Log.Debug("SoundEffect", "Too many playing instances");
+                    return false;
+                }
+#endif
                 // Locate a SoundEffectInstance either one already
                 // allocated and not in use or allocate a new one.
                 SoundEffectInstance instance = null;
-                if (_availableInstances.Count > 0)
+                if (_availableInstances != null && _availableInstances.Count > 0)
                 {
                     instance = _availableInstances[0];
+                    _availableInstances.RemoveAt(0);
+#if !AUDIOTRACK
                     _playingInstances.Add(instance);
-                    _availableInstances.Remove(instance);
+#endif
                 }
                 else
                 {
                     instance = CreateInstance();
                     instance._autoCreated = true;
+#if !AUDIOTRACK
                     _playingInstances.Add(instance);
+#endif
                 }
 
                 instance.Volume = volume;
@@ -428,6 +416,8 @@ namespace Microsoft.Xna.Framework.Audio
                 catch (InstancePlayLimitException)
                 {
                     _playingInstances.Remove(instance);
+                    if (_availableInstances == null)
+                        _availableInstances = new List<SoundEffectInstance>();
                     _availableInstances.Add(instance);
                     return false;
                 }
@@ -568,6 +558,37 @@ namespace Microsoft.Xna.Framework.Audio
             set
             {
                 speedOfSound = value;
+            }
+        }
+
+        static internal void Update()
+        {
+#if DIRECTX || OPENAL || AUDIOTRACK
+            // Cleanup instances which have finished playing.
+            var count = _playingInstances.Count;
+            for (int i = count - 1; i >= 0; --i)
+            {
+                var inst = _playingInstances[i];
+                if (inst.IsDisposed)
+                {
+                    _playingInstances.RemoveAt(i);
+                }
+                else if (inst.State == SoundState.Stopped)
+                {
+                    Android.Util.Log.Debug("SoundEffect", "{0} has stopped (instance {1}) ", inst._effect.Name, inst._id);
+                    if (inst._autoCreated)
+                    {
+                        // Allocate lists first time we need them.
+                        if (inst._effect._availableInstances == null)
+                            inst._effect._availableInstances = new List<SoundEffectInstance>();
+                        inst._effect._availableInstances.Add(inst);
+                    }
+                    _playingInstances.RemoveAt(i);
+#if AUDIOTRACK
+                    inst.Recycle();
+#endif
+#endif
+                }
             }
         }
 

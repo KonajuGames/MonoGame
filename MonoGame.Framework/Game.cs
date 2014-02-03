@@ -712,6 +712,7 @@ namespace Microsoft.Xna.Framework
         internal void DoUpdate(GameTime gameTime)
         {
             AssertNotDisposed();
+            SoundEffect.Update();
             if (Platform.BeforeUpdate(gameTime))
                 Update(gameTime);
         }
