@@ -131,8 +131,7 @@ namespace Microsoft.Xna.Framework.Audio
 
         #endregion
 
-        #region Internal Constructors
-
+        #region Static constructor
         static SoundEffect()
         {
 #if DIRECTX
@@ -141,18 +140,23 @@ namespace Microsoft.Xna.Framework.Audio
             _mixerTask = Task.Factory.StartNew(MixerTask, _mixerCancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Current);
 #endif
         }
+        #endregion
 
+        #region Mixer thread
 #if AUDIOTRACK
         static void MixerTask()
         {
+            float compressor = 0.5f;
             int sampleRate = 22050;
             var nativeSampleRate = AudioTrack.GetNativeOutputSampleRate(Android.Media.Stream.Music);
-            var bufferSizeBytes = AudioTrack.GetMinBufferSize(sampleRate, ChannelOut.Mono, Encoding.Pcm16bit);
-            var bufferSize = bufferSizeBytes / 4;
-            Android.Util.Log.Debug("Mixer", "Mixer starting with buffer of {0} samples. Native sample rate {1}", bufferSize, nativeSampleRate);
-            var audioTrack = new AudioTrack(Android.Media.Stream.Music, sampleRate, ChannelConfiguration.Mono, Encoding.Pcm16bit, bufferSizeBytes, AudioTrackMode.Stream);
+            var bufferSizeBytes = AudioTrack.GetMinBufferSize(sampleRate, ChannelOut.Stereo, Encoding.Pcm16bit);
+            var bufferSize = bufferSizeBytes / 2;
+            var bufferFrames = bufferSize / 2;
+            Android.Util.Log.Debug("Mixer", "Mixer starting with buffer of {0} stereo samples. Native sample rate {1}", bufferSize, nativeSampleRate);
+            var audioTrack = new AudioTrack(Android.Media.Stream.Music, sampleRate, ChannelConfiguration.Stereo, Encoding.Pcm16bit, bufferSizeBytes, AudioTrackMode.Stream);
             var buffer0 = new short[bufferSize];
             var buffer1 = new short[bufferSize];
+            var workBuffer = new float[bufferSize];
             var currentBuffer = buffer1;
             int index = 1;
             Array.Clear(buffer0, 0, bufferSize);
@@ -160,76 +164,137 @@ namespace Microsoft.Xna.Framework.Audio
             audioTrack.Write(buffer0, 0, bufferSize);
             while (!_mixerCancellationToken.IsCancellationRequested)
             {
-                Array.Clear(currentBuffer, 0, bufferSize);
-                lock (_playingInstances)
+                Array.Clear(workBuffer, 0, bufferSize);
+                try
                 {
-                    Android.Util.Log.Debug("Mixer", "Feeding the buffer. {0} playing instances", _playingInstances.Count);
-                    // Iterate backwards so we can remove instances if they finish
-                    for (int i = _playingInstances.Count - 1; i >= 0; --i)
+                    lock (_playingInstances)
                     {
-                        var inst = _playingInstances[i];
-                        switch (inst.soundState)
+                        //Android.Util.Log.Debug("Mixer", "Feeding the buffer. {0} playing instances", _playingInstances.Count);
+                        // Iterate backwards so we can remove instances if they finish
+                        for (int i = _playingInstances.Count - 1; i >= 0; --i)
                         {
-                            case SoundState.Playing:
-                                if (inst._effect._channels == AudioChannels.Mono)
-                                {
-                                    var samplesToMix = inst._effect._frames - inst._position;
-                                    if (samplesToMix > bufferSize)
-                                        samplesToMix = bufferSize;
-                                    if (samplesToMix > 0)
+                            var wbi = 0;
+                            var inst = _playingInstances[i];
+                            var pan = inst.Pan;
+                            var volume = inst.Volume * compressor;
+                            var leftVolume = (pan > 0.0f ? 1.0f - pan : 1.0f) * volume;
+                            var rightVolume = (pan < 0.0f ? 1.0f + pan : 1.0f) * volume;
+                            switch (inst.soundState)
+                            {
+                                case SoundState.Playing:
+                                    if (inst._effect._channels == AudioChannels.Mono)
                                     {
-                                        var data = inst._effect._data;
-                                        for (int s = 0; s < samplesToMix; ++s)
+                                        var framesToMix = inst._effect._frames - inst._position;
+                                        if (framesToMix > bufferFrames)
+                                            framesToMix = bufferFrames;
+                                        if (framesToMix > 0)
                                         {
-                                            short sample = data[inst._position + s];
-                                            currentBuffer[s] += sample;
-                                        }
-                                        inst._position += samplesToMix;
-                                    }
-
-                                    if (inst._position == inst._effect._frames)
-                                    {
-                                        if (inst._loop)
-                                        {
-                                            // Start back at the beginning of the sample data and fill the rest of the buffer
-                                            inst._position = 0;
                                             var data = inst._effect._data;
-                                            samplesToMix = bufferSize - samplesToMix;
-                                            for (int s = 0; s < samplesToMix; ++s)
+                                            for (int s = 0; s < framesToMix; ++s)
                                             {
-                                                short sample = data[s];
-                                                currentBuffer[samplesToMix + s] += sample;
+                                                float sample = data[inst._position + s];
+                                                workBuffer[wbi++] += sample * leftVolume;
+                                                workBuffer[wbi++] += sample * rightVolume;
+                                            }
+                                            inst._position += framesToMix;
+                                        }
+
+                                        if (inst._position >= inst._effect._frames)
+                                        {
+                                            if (inst._loop)
+                                            {
+                                                // Start back at the beginning of the sample data and fill the rest of the buffer
+                                                var data = inst._effect._data;
+                                                var remainingFramesToMix = bufferFrames - framesToMix;
+                                                inst._position = remainingFramesToMix;
+                                                for (int s = 0; s < remainingFramesToMix; ++s)
+                                                {
+                                                    float sample = data[s];
+                                                    workBuffer[wbi++] += sample * leftVolume;
+                                                    workBuffer[wbi++] += sample * rightVolume;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                //Android.Util.Log.Debug("Mixer", "Instance {0} finished ({1})", inst._effect._name, inst._id);
+                                                inst.Stop(true);
+                                                // Instance has finished, so remove it
+                                                _playingInstances.RemoveAt(i);
+                                                // Auto-created instances are returned to a pool for use again later
+                                                if (inst._autoCreated)
+                                                    inst._effect._availableInstances.Add(inst);
                                             }
                                         }
-                                        else
+                                    }
+                                    else
+                                    {
+                                        // Stereo samples
+                                        var framesToMix = inst._effect._frames - inst._position;
+                                        if (framesToMix > bufferFrames)
+                                            framesToMix = bufferFrames;
+                                        if (framesToMix > 0)
                                         {
-                                            Android.Util.Log.Debug("Mixer", "Instance {0} finished", inst._effect._name);
-                                            // Instance has finished, so remove it
-                                            _playingInstances.RemoveAt(i);
-                                            // Auto-created instances are returned to a pool for use again later
-                                            if (inst._autoCreated)
-                                                inst._effect._availableInstances.Add(inst);
+                                            var data = inst._effect._data;
+                                            var di = inst._position;
+                                            for (int s = 0; s < framesToMix; ++s)
+                                            {
+                                                float leftSample = data[di++];
+                                                float rightSample = data[di++];
+                                                workBuffer[wbi++] += leftSample * leftVolume;
+                                                workBuffer[wbi++] += rightSample * rightVolume;
+                                            }
+                                            inst._position += framesToMix;
+                                        }
+
+                                        if (inst._position >= inst._effect._frames)
+                                        {
+                                            if (inst._loop)
+                                            {
+                                                // Start back at the beginning of the sample data and fill the rest of the buffer
+                                                var data = inst._effect._data;
+                                                var remainingFramesToMix = bufferFrames - framesToMix;
+                                                inst._position = remainingFramesToMix;
+                                                var di = 0;
+                                                for (int s = 0; s < remainingFramesToMix; ++s)
+                                                {
+                                                    float leftSample = data[di++];
+                                                    float rightSample = data[di++];
+                                                    workBuffer[wbi++] += leftSample * leftVolume;
+                                                    workBuffer[wbi++] += rightSample * rightVolume;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                //Android.Util.Log.Debug("Mixer", "Instance {0} finished ({1})", inst._effect._name, inst._id);
+                                                inst.Stop(true);
+                                                // Instance has finished, so remove it
+                                                _playingInstances.RemoveAt(i);
+                                                // Auto-created instances are returned to a pool for use again later
+                                                if (inst._autoCreated)
+                                                    inst._effect._availableInstances.Add(inst);
+                                            }
                                         }
                                     }
-                                }
-                                else
-                                {
-                                    // Stereo samples
-                                    // ...
-                                }
-                                break;
-                            case SoundState.Stopped:
-                                Android.Util.Log.Debug("Mixer", "Instance {0} stopped", inst._effect._name);
-                                // Instance has finished, so remove it
-                                _playingInstances.RemoveAt(i);
-                                // Auto-created instances are returned to a pool for use again later
-                                if (inst._autoCreated)
-                                    inst._effect._availableInstances.Add(inst);
-                                break;
+                                    break;
+                                case SoundState.Stopped:
+                                    //Android.Util.Log.Debug("Mixer", "Instance {0} stopped ({1})", inst._effect._name, inst._id);
+                                    // Instance has finished, so remove it
+                                    _playingInstances.RemoveAt(i);
+                                    // Auto-created instances are returned to a pool for use again later
+                                    if (inst._autoCreated)
+                                        inst._effect._availableInstances.Add(inst);
+                                    break;
+                            }
                         }
                     }
                 }
-                //writeTask.Wait();
+                catch (Exception ex)
+                {
+                    Android.Util.Log.Debug("Mixer", ex.Message);
+                }
+                // Copy from work buffer to 16-bit signed buffer
+                for (int i = 0; i < workBuffer.Length; ++i)
+                    currentBuffer[i] = (short)workBuffer[i];
                 audioTrack.Write(currentBuffer, 0, bufferSize);
                 index = 1 - index;
                 currentBuffer = index == 0 ? buffer0 : buffer1;
@@ -240,7 +305,9 @@ namespace Microsoft.Xna.Framework.Audio
             audioTrack.Dispose();
         }
 #endif
+        #endregion
 
+        #region Internal Constructors
 #if DIRECTX
         internal SoundEffect()
         {
@@ -383,8 +450,7 @@ namespace Microsoft.Xna.Framework.Audio
             Buffer.BlockCopy(buffer, 0, _data, 0, buffer.Length);
             _sampleRate = sampleRate;
             _channels = channels;
-            // Divide by two due to 16-bit PCM
-            _frames = _data.Length / 2;
+            _frames = _data.Length;
             if (channels == AudioChannels.Stereo)
                 _frames /= 2;
 #elif OPENAL
@@ -519,21 +585,23 @@ namespace Microsoft.Xna.Framework.Audio
                 if (_availableInstances.Count > 0)
                 {
                     instance = _availableInstances[0];
-                    _playingInstances.Add(instance);
-                    _availableInstances.Remove(instance);
+                    _availableInstances.RemoveAt(0);
                 }
                 else
                 {
                     instance = CreateInstance();
                     instance._autoCreated = true;
-                    _playingInstances.Add(instance);
                 }
+#if !AUDIOTRACK
+                _playingInstances.Add(instance);
+#endif
 
                 instance.Volume = volume;
                 instance.Pitch = pitch;
                 instance.Pan = pan;
                 try
                 {
+                    //Android.Util.Log.Debug("Mixer", "Instance {0} playing ({1})", _name, instance._id);
                     instance.Play();
                 }
                 catch (InstancePlayLimitException)

@@ -74,6 +74,8 @@ namespace Microsoft.Xna.Framework.Audio
         internal float _pan;
         internal float _pitch;
         internal int _position;
+        static int _globalId = 0;
+        internal int _id;
 #else
         private Sound _sound;
 		internal Sound Sound 
@@ -100,6 +102,7 @@ namespace Microsoft.Xna.Framework.Audio
         internal SoundEffectInstance(SoundEffect soundEffect)
         {
             _effect = soundEffect;
+            _id = ++_globalId;
         }
 #else
         internal SoundEffectInstance()
@@ -266,7 +269,7 @@ namespace Microsoft.Xna.Framework.Audio
 #elif AUDIOTRACK
             lock (SoundEffect._playingInstances)
             {
-                if (SoundEffect._playingInstances.Count < 16)
+                if (SoundEffect._playingInstances.Count < 32)
                 {
                     soundState = SoundState.Playing;
                     _position = 0;
