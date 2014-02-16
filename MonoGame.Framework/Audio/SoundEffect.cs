@@ -428,7 +428,6 @@ namespace Microsoft.Xna.Framework.Audio
             : this(buffer, sampleRate, channels)
         {
             _name = name;
-            Android.Util.Log.Debug("SoundEffect", "{0} {1} {2}", name, sampleRate, channels);
         }
 
         ~SoundEffect()
