@@ -7,12 +7,13 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Diagnostics;
 #if MACOS
 using MonoMac.AudioToolbox;
-#endif
-#if WINDOWS
+#elif WINDOWS
 using NAudio.Wave;
 using NAudio.MediaFoundation;
+using System.Globalization;
 #endif
 
 namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
@@ -22,60 +23,60 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
     /// </summary>
     public class AudioContent : ContentItem, IDisposable
     {
-        internal List<byte> data;
+        internal List<byte> _data;
 #if WINDOWS
-        WaveStream reader;
+        WaveStream _reader;
 #endif
-        TimeSpan duration;
-        string fileName;
-        AudioFileType fileType;
-        AudioFormat format;
-        int loopLength;
-        int loopStart;
-        bool disposed;
+        TimeSpan _duration;
+        string _fileName;
+        AudioFileType _fileType;
+        AudioFormat _format;
+        int _loopLength;
+        int _loopStart;
+        bool _disposed;
 
         /// <summary>
         /// Gets the raw audio data.
         /// </summary>
         /// <value>If unprocessed, the source data; otherwise, the processed data.</value>
-        public ReadOnlyCollection<byte> Data { get { return data.AsReadOnly(); } }
+        public ReadOnlyCollection<byte> Data { get { return _data.AsReadOnly(); } }
 
         /// <summary>
         /// Gets the duration (in milliseconds) of the audio data.
         /// </summary>
         /// <value>Duration of the audio data.</value>
-        public TimeSpan Duration { get { return duration; } }
+        public TimeSpan Duration { get { return _duration; } }
 
         /// <summary>
         /// Gets the file name containing the audio data.
         /// </summary>
         /// <value>The name of the file containing this data.</value>
         [ContentSerializerAttribute]
-        public string FileName { get { return fileName; } }
+        public string FileName { get { return _fileName; } }
 
         /// <summary>
         /// Gets the AudioFileType of this audio source.
         /// </summary>
         /// <value>The AudioFileType of this audio source.</value>
-        public AudioFileType FileType { get { return fileType; } }
+        public AudioFileType FileType { get { return _fileType; } }
 
         /// <summary>
         /// Gets the AudioFormat of this audio source.
         /// </summary>
         /// <value>The AudioFormat of this audio source.</value>
-        public AudioFormat Format { get { return format; } }
+        public AudioFormat Format { get { return _format; } }
 
         /// <summary>
         /// Gets the loop length, in samples.
         /// </summary>
         /// <value>The number of samples in the loop.</value>
-        public int LoopLength { get { return loopLength; } }
+        public int LoopLength { get { return _loopLength; } }
 
         /// <summary>
         /// Gets the loop start, in samples.
         /// </summary>
         /// <value>The number of samples to the start of the loop.</value>
-        public int LoopStart { get { return loopStart; } }
+        public int LoopStart { get { return _loopStart; } }
 
         /// <summary>
         /// Initializes a new instance of AudioContent.
@@ -85,11 +86,9 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
         /// <remarks>Constructs the object from the specified source file, in the format specified.</remarks>
         public AudioContent(string audioFileName, AudioFileType audioFileType)
         {
-            fileName = audioFileName;
-            fileType = audioFileType;
-#if WINDOWS
-            Read();
-#endif
+            _fileName = audioFileName;
+            _fileType = audioFileType;
+            Read(_fileName);
         }
 
         /// <summary>
@@ -101,7 +100,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
         }
 
         /// <summary>
-        /// Returns the sample rate for the given quality setting.
+        /// Returns the sample rate for the given quality setting.  Used for sound effect conversion.
         /// </summary>
         /// <param name="quality">The quality setting.</param>
         /// <returns>The sample rate for the quality.</returns>
@@ -110,14 +109,14 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
             switch (quality)
             {
                 case ConversionQuality.Low:
-                    return Math.Max(8000, format.SampleRate / 2);
+                    return Math.Max(8000, _format.SampleRate / 2);
             }
 
-            return Math.Max(8000, format.SampleRate);
+            return Math.Max(8000, _format.SampleRate);
         }
 
         /// <summary>
-        /// Returns the bitrate for the given quality setting.
+        /// Returns the bitrate for the given quality setting.  Used for song conversion.
         /// </summary>
         /// <param name="quality">The quality setting.</param>
         /// <returns>The bitrate for the quality.</returns>
@@ -135,31 +134,32 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
         }
 
 #if WINDOWS
-	public static MediaType SelectMediaType (Guid audioSubtype, WaveFormat inputFormat, int desiredBitRate)
-	{
-		return MediaFoundationEncoder.GetOutputMediaTypes (audioSubtype)
-		    .Where (mt => mt.SampleRate >= inputFormat.SampleRate && mt.ChannelCount == inputFormat.Channels)
-		    .Select (mt => new { MediaType = mt, Delta = Math.Abs (desiredBitRate - mt.AverageBytesPerSecond * 8) })
-		    .OrderBy (mt => mt.Delta)
-		    .Select (mt => mt.MediaType)
-		    .FirstOrDefault ();
-	}
+        public static MediaType SelectMediaType (Guid audioSubtype, WaveFormat inputFormat, int desiredBitRate)
+        {
+            return MediaFoundationEncoder.GetOutputMediaTypes(audioSubtype)
+                .Where(mt => mt.SampleRate >= inputFormat.SampleRate && mt.ChannelCount == inputFormat.Channels)
+                .Select(mt => new { MediaType = mt, Delta = Math.Abs(desiredBitRate - mt.AverageBytesPerSecond * 8) })
+                .OrderBy(mt => mt.Delta)
+                .Select(mt => mt.MediaType)
+                .FirstOrDefault();
+        }
+
         /// <summary>
         /// Converts the audio using the specified wave format.
         /// </summary>
         /// <param name="waveFormat">The WaveFormat to use for the conversion.</param>
         void ConvertWav(WaveFormat waveFormat)
         {
-            reader.Position = 0;
+            _reader.Position = 0;
 
             //var mediaTypes = MediaFoundationEncoder.GetOutputMediaTypes(NAudio.MediaFoundation.AudioSubtypes.MFAudioFormat_PCM);
-            using (var resampler = new MediaFoundationResampler(reader, waveFormat))
+            using (var resampler = new MediaFoundationResampler(_reader, waveFormat))
             {
                 using (var outStream = new MemoryStream())
                 {
                     // Since we cannot determine ahead of time the number of bytes to be
                     // read, read four seconds worth at a time.
-                    byte[] bytes = new byte[reader.WaveFormat.AverageBytesPerSecond * 4];
+                    byte[] bytes = new byte[_reader.WaveFormat.AverageBytesPerSecond * 4];
                     while (true)
                     {
                         int bytesRead = resampler.Read(bytes, 0, bytes.Length);
@@ -167,8 +167,8 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
                             break;
                         outStream.Write(bytes, 0, bytesRead);
                     }
-                    data = new List<byte>(outStream.ToArray());
-                    format = new AudioFormat(waveFormat);
+                    _data = new List<byte>(outStream.ToArray());
+                    _format = new AudioFormat(waveFormat);
                 }
             }
         }
@@ -182,40 +182,114 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
         /// <param name="targetFileName">Name of the file containing the processed source audio. Must be null for Wav and Adpcm. Must not be null for streaming compressed formats.</param>
         public void ConvertFormat(ConversionFormat formatType, ConversionQuality quality, string targetFileName)
         {
-            if (disposed)
+            if (_disposed)
                 throw new ObjectDisposedException("AudioContent");
 
+            if (formatType == ConversionFormat.Pcm || formatType == ConversionFormat.Adpcm || formatType == ConversionFormat.ImaAdpcm)
+            {
+                if (!String.IsNullOrEmpty(targetFileName))
+                    throw new InvalidOperationException("targetFileName must be null for non-streaming formats");
+            }
 
-	    switch (formatType)
+            switch (formatType)
             {
                 case ConversionFormat.Adpcm:
-#if WINDOWS
-                    ConvertWav(new AdpcmWaveFormat(QualityToSampleRate(quality), format.ChannelCount));
+#if !WINDOWS
+                    ConvertWav(new AdpcmWaveFormat(QualityToSampleRate(quality), _format.ChannelCount));
 #else
-				throw new NotSupportedException("Adpcm encoding supported on Windows only");
+                    {
+                        var inputPath = Path.GetTempFileName();
+                        using (var input = new FileStream(inputPath, FileMode.Create))
+                        {
+                            var bytes = _data.ToArray();
+                            input.Write(bytes, 0, bytes.Length);
+                        }
+
+                        var outputPath = Path.GetTempFileName() + ".wav";
+
+                        var parameters = String.Format(CultureInfo.InvariantCulture, "-t raw -r {0} -e {1} -b {2} -c {3} {4} "
+                            , _format.SampleRate
+                            , _format.BitsPerSample == 8 ? "unsigned" : "signed"
+                            , _format.BitsPerSample
+                            , _format.ChannelCount
+                            , inputPath);
+                        var targetSampleRate = QualityToSampleRate(quality);
+                        if (_format.SampleRate != targetSampleRate)
+                            parameters += String.Format(CultureInfo.InvariantCulture, "-r {0} ", targetSampleRate);
+                        parameters += "-e ms ";
+                        parameters += "\"" + outputPath + "\"";
+                        var psi = new ProcessStartInfo("sox", parameters);
+                        using (var process = Process.Start(psi))
+                        {
+                            process.WaitForExit();
+                            if (process.ExitCode != 0)
+                                throw new InvalidContentException("Failed to convert " + _fileName + " to PCM format");
+                        }
+
+                        Read(outputPath);
+                        File.Delete(inputPath);
+                        File.Delete(outputPath);
+                    }
 #endif
                     break;
 
                 case ConversionFormat.Pcm:
 #if WINDOWS
-                    ConvertWav(new WaveFormat(QualityToSampleRate(quality), format.ChannelCount));
+                    ConvertWav(new WaveFormat(QualityToSampleRate(quality), _format.ChannelCount));
 #elif LINUX
-                    // TODO Do the conversion for Linux platform
+                    {
+                        var inputPath = Path.GetTempFileName();
+                        using (var input = new FileStream(inputPath, FileMode.Create))
+                        {
+                            var bytes = _data.ToArray();
+                            input.Write(bytes, 0, bytes.Length);
+                        }
+
+                        var outputPath = Path.GetTempFileName() + ".wav";
+
+                        var parameters = String.Format(CultureInfo.InvariantCulture, "-t raw -r {0} -e {1} -b {2} -c {3} \"{4}\" "
+                            , _format.SampleRate
+                            , _format.BitsPerSample == 8 ? "unsigned" : "signed"
+                            , _format.BitsPerSample
+                            , _format.ChannelCount
+                            , inputPath);
+                        var targetSampleRate = QualityToSampleRate(quality);
+                        if (_format.SampleRate != targetSampleRate)
+                            parameters += String.Format(CultureInfo.InvariantCulture, "-r {0} ", targetSampleRate);
+                        if (_format.BitsPerSample != 16)
+                            parameters += "-e signed -b 16 ";
+                        parameters += "\"" + outputPath + "\"";
+                        var psi = new ProcessStartInfo("sox", parameters);
+                        try
+                        {
+                            using (var process = Process.Start(psi))
+                            {
+                                process.WaitForExit();
+                                if (process.ExitCode != 0)
+                                    throw new PipelineException("Failed to convert " + _fileName + " to PCM format");
+                            }
+                        }
+                        catch (System.ComponentModel.Win32Exception e)
+                        {
+                            throw new PipelineException("Failed to launch 'sox' utility for sound conversion. " + e.Message);
+                        }
+                        Read(outputPath);
+                        File.Delete(inputPath);
+                        File.Delete(outputPath);
+                    }
 #else
-				targetFileName = Guid.NewGuid().ToString() + ".wav";
-				if (!ConvertAudio.Convert(fileName, targetFileName, AudioFormatType.LinearPCM, MonoMac.AudioToolbox.AudioFileType.WAVE, quality)) {
-					throw new InvalidDataException("Failed to convert to PCM");
-				}
-				Read(targetFileName);
-				if (File.Exists(targetFileName))
-					File.Delete(targetFileName);
+                    targetFileName = Path.GetTempFileName();
+                    if (!ConvertAudio.Convert(_fileName, targetFileName, AudioFormatType.LinearPCM, MonoMac.AudioToolbox.AudioFileType.WAVE, quality))
+                        throw new InvalidDataException("Failed to convert to PCM");
+                    Read(targetFileName);
+                    File.Delete(targetFileName);
 #endif
                     break;
 
                 case ConversionFormat.WindowsMedia:
 #if WINDOWS
-                    reader.Position = 0;
-                    MediaFoundationEncoder.EncodeToWma(reader, targetFileName, QualityToBitRate(quality));
+                    _reader.Position = 0;
+                    MediaFoundationEncoder.EncodeToWma(_reader, targetFileName, QualityToBitRate(quality));
                     break;
 #else
                     throw new NotSupportedException("WindowsMedia encoding supported on Windows only");
@@ -226,30 +300,64 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
 
                 case ConversionFormat.ImaAdpcm:
 #if WINDOWS
-                    ConvertWav(new ImaAdpcmWaveFormat(QualityToSampleRate(quality), format.ChannelCount, 4));
+                    ConvertWav(new ImaAdpcmWaveFormat(QualityToSampleRate(quality), _format.ChannelCount, 4));
 #else
-				throw new NotImplementedException("ImaAdpcm has not been implemented on this platform");
+                    {
+                        var inputPath = Path.GetTempFileName();
+                        using (var input = new FileStream(inputPath, FileMode.Create))
+                        {
+                            var bytes = _data.ToArray();
+                            input.Write(bytes, 0, bytes.Length);
+                        }
+
+                        var outputPath = Path.GetTempFileName() + ".wav";
+
+                        var parameters = String.Format(CultureInfo.InvariantCulture, "-t raw -r {0} -e {1} -b {2} -c {3} {4} "
+                            , _format.SampleRate
+                            , _format.BitsPerSample == 8 ? "unsigned" : "signed"
+                            , _format.BitsPerSample
+                            , _format.ChannelCount
+                            , inputPath);
+                        var targetSampleRate = QualityToSampleRate(quality);
+                        if (_format.SampleRate != targetSampleRate)
+                            parameters += String.Format(CultureInfo.InvariantCulture, "-r {0} ", targetSampleRate);
+                        parameters += "-e ima ";
+                        parameters += "\"" + outputPath + "\"";
+                        var psi = new ProcessStartInfo("sox", parameters);
+                        using (var process = Process.Start(psi))
+                        {
+                            process.WaitForExit();
+                            if (process.ExitCode != 0)
+                                throw new InvalidContentException("Failed to convert " + _fileName + " to PCM format");
+                        }
+
+                        Read(outputPath);
+                        File.Delete(inputPath);
+                        File.Delete(outputPath);
+                    }
 #endif
                     break;
 
                 case ConversionFormat.Aac:
 #if WINDOWS
-				    reader.Position = 0;
-				    var mediaType = SelectMediaType (AudioSubtypes.MFAudioFormat_AAC, reader.WaveFormat, QualityToBitRate (quality));
-				    if (mediaType == null) {
-					    throw new InvalidDataException ("Cound not find a suitable mediaType to convert to.");
-				    }
-				    using (var encoder = new MediaFoundationEncoder (mediaType)) {
-					    encoder.Encode (targetFileName, reader);
-				    } 
+                    _reader.Position = 0;
+                    var mediaType = SelectMediaType(AudioSubtypes.MFAudioFormat_AAC, _reader.WaveFormat, QualityToBitRate(quality));
+                    if (mediaType == null)
+                        throw new InvalidDataException("Cound not find a suitable mediaType to convert to.");
+                    using (var encoder = new MediaFoundationEncoder(mediaType))
+                        encoder.Encode(targetFileName, _reader);
 #elif LINUX
-					// TODO: Code for Linux convertion
+                    using (var process = Process.Start("sox", _fileName + " " + targetFileName))
+                    {
+                        process.WaitForExit();
+                        if (process.ExitCode != 0)
+                            throw new InvalidContentException("Failed to convert " + _fileName + " to AAC format");
+                    }
 #else
-					if (!ConvertAudio.Convert(fileName, targetFileName, AudioFormatType.MPEG4AAC, MonoMac.AudioToolbox.AudioFileType.MPEG4, quality)) {
-						throw new InvalidDataException("Failed to convert to AAC");
-					}
+                    if (!ConvertAudio.Convert(fileName, targetFileName, AudioFormatType.MPEG4AAC, MonoMac.AudioToolbox.AudioFileType.MPEG4, quality))
+                        throw new InvalidDataException("Failed to convert to AAC");
 #endif
-				break;
+                    break;
 
                 case ConversionFormat.Vorbis:
                     throw new NotImplementedException("Vorbis is not yet implemented as an encoding format.");
@@ -271,88 +379,92 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
         /// <param name="disposing">True if disposing of the managed resources</param>
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposed)
+            if (!_disposed)
             {
                 if (disposing)
                 {
 #if WINDOWS
                     // Release managed resources
-                    if (reader != null)
-                        reader.Dispose();
-                    reader = null;
+                    if (_reader != null)
+                        _reader.Dispose();
+                    _reader = null;
 #endif
                 }
-                disposed = true;
+                _disposed = true;
             }
         }
 
-#if WINDOWS
+#if !WINDOWS
         /// <summary>
         /// Read an audio file.
         /// </summary>
-        void Read()
+        void Read(string fileName)
         {
+            _reader = new MediaFoundationReader(fileName);
+            _duration = _reader.TotalTime;
+            _format = new AudioFormat(_reader.WaveFormat);
 
-            reader = new MediaFoundationReader(fileName);
-            duration = reader.TotalTime;
-            format = new AudioFormat(reader.WaveFormat);
-
-            var bytes = new byte[reader.Length];
-            var read = reader.Read(bytes, 0, bytes.Length);
-            data = new List<byte>(bytes);
+            var bytes = new byte[_reader.Length];
+            var read = _reader.Read(bytes, 0, bytes.Length);
+            _data = new List<byte>(bytes);
         }
-#elif MACOS
-		void Read(string filename) {
-			UInt32 dataSize;
-			using (var fs = new FileStream(filename, FileMode.Open)) {
-				using (var reader = new BinaryReader(fs)) {
-					var riffID = reader.ReadBytes (4);
-					var fileSize = reader.ReadInt32 ();
-					var wavID = reader.ReadBytes (4);
-			 		var fmtID = reader.ReadBytes (4);
-			 		var fmtSize = reader.ReadUInt32 ();
-					var fmtCode = reader.ReadUInt16 ();
-					var channels = reader.ReadUInt16 ();
-					var sampleRate = reader.ReadUInt32 ();
-					var fmtAvgBPS = reader.ReadUInt32 ();
-					var fmtBlockAlign = reader.ReadUInt16 ();
-					var bitDepth = reader.ReadUInt16 ();
+#else
+        void Read(string fileName)
+        {
+            UInt32 dataSize;
+            using (var fs = new FileStream(fileName, FileMode.Open))
+            {
+                using (var reader = new BinaryReader(fs))
+                {
+                    var riffID = reader.ReadBytes(4);
+                    var fileSize = reader.ReadInt32();
+                    var wavID = reader.ReadBytes(4);
+                    var fmtID = reader.ReadBytes(4);
+                    var fmtSize = reader.ReadUInt32();
+                    var fmtCode = reader.ReadUInt16();
+                    var channels = reader.ReadUInt16();
+                    var sampleRate = reader.ReadUInt32();
+                    var fmtAvgBPS = reader.ReadUInt32();
+                    var fmtBlockAlign = reader.ReadUInt16();
+                    var bitDepth = reader.ReadUInt16();
 
-					string dataId = "data";
-					int index =0;
-					char c;
-					while (true) {
-						c = reader.ReadChar ();
-						if (c == dataId [index]) {
-							index++;
-						} else
-							index = 0;
-						if (index == dataId.Length)
-							break;
-					}
+                    string dataId = "data";
+                    int index =0;
+                    char c;
+                    while (true)
+                    {
+                        c = reader.ReadChar();
+                        if (c == dataId[index])
+                            index++;
+                        else
+                            index = 0;
+                        if (index == dataId.Length)
+                            break;
+                    }
 
-					dataSize = reader.ReadUInt32 ();
-				    this.data = reader.ReadBytes ((int)dataSize).ToList();
+                    dataSize = reader.ReadUInt32();
+                    this._data = reader.ReadBytes((int)dataSize).ToList();
 
-					using(var ms = new MemoryStream()) {
-						using (var writer = new BinaryWriter(ms)) {
-							writer.Write ((int)18);
-							writer.Write ((short)fmtCode);
-							writer.Write ((short)channels);
-							writer.Write ((int)sampleRate);
-							writer.Write ((int)fmtAvgBPS);
-							writer.Write ((short)fmtBlockAlign);
-							writer.Write ((short)bitDepth);
-							writer.Write ((short)0);
-						}					
+                    using (var ms = new MemoryStream())
+                    {
+                        using (var writer = new BinaryWriter(ms))
+                        {
+                            writer.Write((int)18);
+                            writer.Write((short)fmtCode);
+                            writer.Write((short)channels);
+                            writer.Write((int)sampleRate);
+                            writer.Write((int)fmtAvgBPS);
+                            writer.Write((short)fmtBlockAlign);
+                            writer.Write((short)bitDepth);
+                            writer.Write((short)0);
+                        }
 
-						this.format = new AudioFormat (ms.ToArray().ToList());
-					}
-					this.duration = new TimeSpan (0,0,(int)(fileSize / (sampleRate * channels * bitDepth / 8)));
-
-				}
-			}
-		}
+                        _format = new AudioFormat(ms.ToArray(), (int)bitDepth, (int)fmtBlockAlign, (int)channels, (int)fmtCode, (int)sampleRate);
+                    }
+                    this._duration = new TimeSpan(0, 0, (int)(fileSize / (sampleRate * channels * bitDepth / 8)));
+                }
+            }
+        }
 #endif
-	}
+    }
 }
