@@ -44,10 +44,16 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Processors
             {
                 case ConversionQuality.Medium:
                 case ConversionQuality.Low:
-                    if ((context.TargetPlatform == TargetPlatform.iOS) || (context.TargetPlatform == TargetPlatform.MacOSX))
-                        targetFormat = ConversionFormat.ImaAdpcm;
-                    else
-                        targetFormat = ConversionFormat.Adpcm;
+                    // Windows platforms use MS/ADPCM. Other platforms use IMA/ADPCM
+                    targetFormat = ConversionFormat.ImaAdpcm;
+                    switch (context.TargetPlatform)
+                    {
+                        case TargetPlatform.Windows:
+                        case TargetPlatform.WindowsPhone8:
+                        case TargetPlatform.WindowsStoreApp:
+                            targetFormat = ConversionFormat.Adpcm;
+                            break;
+                    }
                     break;
             }
 
