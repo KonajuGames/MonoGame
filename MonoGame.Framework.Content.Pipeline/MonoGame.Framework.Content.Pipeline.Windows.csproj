@@ -139,6 +139,7 @@
     <Compile Include="..\Tools\2MGFX\ShaderInfo.cs">
       <Link>Processors\MGFX\ShaderInfo.cs</Link>
     </Compile>
+    <Compile Include="AacImporter.cs" />
     <Compile Include="Audio\AudioContent.cs" />
     <Compile Include="Audio\AudioFileType.cs" />
     <Compile Include="Audio\AudioFormat.cs" />
@@ -309,6 +310,7 @@
     <Compile Include="TargetPlatform.cs" />
     <Compile Include="TextureImporter.cs" />
     <Compile Include="VideoContent.cs" />
+    <Compile Include="VorbisImporter.cs" />
     <Compile Include="WavImporter.cs" />
     <Compile Include="WmaImporter.cs" />
     <Compile Include="WmvImporter.cs" />
