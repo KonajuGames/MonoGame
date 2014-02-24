@@ -194,7 +194,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
             switch (formatType)
             {
                 case ConversionFormat.Adpcm:
-#if !WINDOWS
+#if WINDOWS
                     ConvertWav(new AdpcmWaveFormat(QualityToSampleRate(quality), _format.ChannelCount));
 #else
                     {
@@ -226,7 +226,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
                                 throw new InvalidContentException("Failed to convert " + _fileName + " to PCM format");
                         }
 
-                        Read(outputPath);
+                        ReadWav(outputPath);
                         File.Delete(inputPath);
                         File.Delete(outputPath);
                     }
@@ -273,7 +273,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
                         {
                             throw new PipelineException("Failed to launch 'sox' utility for sound conversion. " + e.Message);
                         }
-                        Read(outputPath);
+                        ReadWav(outputPath);
                         File.Delete(inputPath);
                         File.Delete(outputPath);
                     }
@@ -331,7 +331,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
                                 throw new InvalidContentException("Failed to convert " + _fileName + " to PCM format");
                         }
 
-                        Read(outputPath);
+                        ReadWav(outputPath);
                         File.Delete(inputPath);
                         File.Delete(outputPath);
                     }
@@ -394,7 +394,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
             }
         }
 
-#if !WINDOWS
+#if WINDOWS
         /// <summary>
         /// Read an audio file.
         /// </summary>
@@ -410,6 +410,14 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
         }
 #else
         void Read(string fileName)
+        {
+            if (_fileType == AudioFileType.Wav)
+                ReadWav(fileName);
+            else
+                ReadOther(fileName);
+        }
+
+        void ReadWav(string fileName)
         {
             UInt32 dataSize;
             using (var fs = new FileStream(fileName, FileMode.Open))
@@ -464,6 +472,23 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
                     this._duration = new TimeSpan(0, 0, (int)(fileSize / (sampleRate * channels * bitDepth / 8)));
                 }
             }
+        }
+
+        void ReadOther(string fileName)
+        {
+            var outputPath = Path.GetTempFileName() + ".wav";
+
+            var parameters = "\"" + fileName + "\" \"" + outputPath + "\"";
+            var psi = new ProcessStartInfo("sox", parameters);
+            using (var process = Process.Start(psi))
+            {
+                process.WaitForExit();
+                if (process.ExitCode != 0)
+                    throw new InvalidContentException("Failed to convert " + _fileName + " to PCM format");
+            }
+
+            ReadWav(outputPath);
+            File.Delete(outputPath);
         }
 #endif
     }

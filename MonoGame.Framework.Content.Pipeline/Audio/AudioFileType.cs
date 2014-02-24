@@ -23,5 +23,15 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
         /// The WMA format
         /// </summary>
         Wma,
+
+        /// <summary>
+        /// The AAC format
+        /// </summary>
+        Aac,
+
+        /// <summary>
+        /// The Vorbis format
+        /// </summary>
+        Vorbis,
     }
 }
