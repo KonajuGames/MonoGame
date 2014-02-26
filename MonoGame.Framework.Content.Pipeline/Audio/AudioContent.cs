@@ -8,6 +8,9 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Diagnostics;
+using System.Globalization;
+
+
 #if MACOS
 using MonoMac.AudioToolbox;
 #elif WINDOWS
@@ -424,11 +427,11 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
             {
                 using (var reader = new BinaryReader(fs))
                 {
-                    var riffID = reader.ReadBytes(4);
+					/*var riffID =*/ reader.ReadBytes(4);
                     var fileSize = reader.ReadInt32();
-                    var wavID = reader.ReadBytes(4);
-                    var fmtID = reader.ReadBytes(4);
-                    var fmtSize = reader.ReadUInt32();
+					/*var wavID =*/ reader.ReadBytes(4);
+					/*var fmtID =*/ reader.ReadBytes(4);
+					/*var fmtSize =*/ reader.ReadUInt32();
                     var fmtCode = reader.ReadUInt16();
                     var channels = reader.ReadUInt16();
                     var sampleRate = reader.ReadUInt32();
