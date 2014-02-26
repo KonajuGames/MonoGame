@@ -23,7 +23,11 @@ namespace MGCB
     public class CommandLineParser
     {
         readonly object _optionsObject;
-
+#if WINDOWS
+        readonly string _paramPrefix = "/";
+#else
+        readonly string _paramPrefix = "-";
+#endif
         readonly Queue<MemberInfo> _requiredOptions = new Queue<MemberInfo>();
         readonly Dictionary<string, MemberInfo> _optionalOptions = new Dictionary<string, MemberInfo>();
 
@@ -108,7 +112,7 @@ namespace MGCB
 
         bool ParseArgument(string arg)
         {
-            if (arg.StartsWith("/"))
+            if (arg.StartsWith(_paramPrefix))
             {
                 // After the first escaped argument we can no
                 // longer read non-escaped arguments.
@@ -264,9 +268,9 @@ namespace MGCB
                                    (method != null && method.GetParameters().Length != 0);
 
                     if (hasValue)
-                        Console.Error.WriteLine("  /{0}:<{1}>\n    {2}\n", param.Name, param.ValueName, param.Description);
+                        Console.Error.WriteLine("  {0}{1}:<{2}>\n    {3}\n", _paramPrefix, param.Name, param.ValueName, param.Description);
                     else
-                        Console.Error.WriteLine("  /{0}\n    {1}\n", param.Name, param.Description);
+                        Console.Error.WriteLine("  {0}{1}\n    {2}\n", _paramPrefix, param.Name, param.Description);
                 }
             }
         }
