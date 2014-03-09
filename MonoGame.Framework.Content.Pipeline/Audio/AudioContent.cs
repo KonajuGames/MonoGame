@@ -26,6 +26,16 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
     /// </summary>
     public class AudioContent : ContentItem, IDisposable
     {
+		/// <summary>
+		/// The path to the sox binary.
+		/// </summary>
+#if LINUX
+		public static string SoxPath = @"/usr/bin";
+#endif
+#if MACOS
+		public string SoxPath = @"/opt/local/bin";
+#endif
+
         internal List<byte> _data;
 #if WINDOWS
         WaveStream _reader;
@@ -221,7 +231,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
                             parameters += String.Format(CultureInfo.InvariantCulture, "-r {0} ", targetSampleRate);
                         parameters += "-e ms ";
                         parameters += "\"" + outputPath + "\"";
-                        var psi = new ProcessStartInfo("sox", parameters);
+                        var psi = new ProcessStartInfo(Path.Combine(SoxPath, "sox"), parameters);
                         using (var process = Process.Start(psi))
                         {
                             process.WaitForExit();
@@ -262,19 +272,12 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
                         if (_format.BitsPerSample != 16)
                             parameters += "-e signed -b 16 ";
                         parameters += "\"" + outputPath + "\"";
-                        var psi = new ProcessStartInfo("sox", parameters);
-                        try
+                        var psi = new ProcessStartInfo(Path.Combine(SoxPath, "sox"), parameters);
+                        using (var process = Process.Start(psi))
                         {
-                            using (var process = Process.Start(psi))
-                            {
-                                process.WaitForExit();
-                                if (process.ExitCode != 0)
-                                    throw new PipelineException("Failed to convert " + _fileName + " to PCM format");
-                            }
-                        }
-                        catch (System.ComponentModel.Win32Exception e)
-                        {
-                            throw new PipelineException("Failed to launch 'sox' utility for sound conversion. " + e.Message);
+                            process.WaitForExit();
+                            if (process.ExitCode != 0)
+                                throw new PipelineException("Failed to convert " + _fileName + " to PCM format");
                         }
                         ReadWav(outputPath);
                         File.Delete(inputPath);
@@ -326,7 +329,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
                             parameters += String.Format(CultureInfo.InvariantCulture, "-r {0} ", targetSampleRate);
                         parameters += "-e ima ";
                         parameters += "\"" + outputPath + "\"";
-                        var psi = new ProcessStartInfo("sox", parameters);
+                        var psi = new ProcessStartInfo(Path.Combine(SoxPath, "sox"), parameters);
                         using (var process = Process.Start(psi))
                         {
                             process.WaitForExit();
@@ -350,7 +353,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
                     using (var encoder = new MediaFoundationEncoder(mediaType))
                         encoder.Encode(targetFileName, _reader);
 #elif LINUX
-                    using (var process = Process.Start("sox", _fileName + " " + targetFileName))
+                    using (var process = Process.Start(Path.Combine(SoxPath, "sox"), _fileName + " " + targetFileName))
                     {
                         process.WaitForExit();
                         if (process.ExitCode != 0)
@@ -363,7 +366,18 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
                     break;
 
                 case ConversionFormat.Vorbis:
-                    throw new NotImplementedException("Vorbis is not yet implemented as an encoding format.");
+#if LINUX
+                    using (var process = Process.Start(Path.Combine(SoxPath, "sox"), _fileName + " " + targetFileName))
+                    {
+                        process.WaitForExit();
+                        if (process.ExitCode != 0)
+                            throw new InvalidContentException("Failed to convert " + _fileName + " to Vorbis format");
+                    }
+#else
+                    if (!ConvertAudio.Convert(fileName, targetFileName, AudioFormatType.MPEG4AAC, MonoMac.AudioToolbox.AudioFileType.MPEG4, quality))
+                        throw new InvalidDataException("Failed to convert to AAC");
+#endif
+                    break;
             }
         }
 
@@ -482,7 +496,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
             var outputPath = Path.GetTempFileName() + ".wav";
 
             var parameters = "\"" + fileName + "\" \"" + outputPath + "\"";
-            var psi = new ProcessStartInfo("sox", parameters);
+            var psi = new ProcessStartInfo(Path.Combine(SoxPath, "sox"), parameters);
             using (var process = Process.Start(psi))
             {
                 process.WaitForExit();

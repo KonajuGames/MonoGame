@@ -23,11 +23,7 @@ namespace MGCB
     public class CommandLineParser
     {
         readonly object _optionsObject;
-#if WINDOWS
         readonly string _paramPrefix = "/";
-#else
-        readonly string _paramPrefix = "-";
-#endif
         readonly Queue<MemberInfo> _requiredOptions = new Queue<MemberInfo>();
         readonly Dictionary<string, MemberInfo> _optionalOptions = new Dictionary<string, MemberInfo>();
 
