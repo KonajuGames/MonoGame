@@ -140,6 +140,15 @@ namespace MGCB
                 item.ProcessorParams.Add(pair.Key, pair.Value);
         }
 
+		[CommandLineParameter(
+			Name = "soxPath",
+			ValueName = "path",
+			Description = "Sets the path to the SoX binary")]
+		public void SoxPath(string path)
+		{
+			Microsoft.Xna.Framework.Content.Pipeline.Audio.AudioContent.SoxPath = path;
+		}
+
         public class ContentItem
         {
             public string SourceFile;
