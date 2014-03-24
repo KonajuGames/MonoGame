@@ -10,13 +10,11 @@ using System.Linq;
 using System.Diagnostics;
 using System.Globalization;
 
-
 #if MACOS
 using MonoMac.AudioToolbox;
 #elif WINDOWS
 using NAudio.Wave;
 using NAudio.MediaFoundation;
-using System.Globalization;
 #endif
 
 namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
@@ -30,10 +28,10 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
 		/// The path to the sox binary.
 		/// </summary>
 #if LINUX
-		public static string SoxPath = @"/usr/bin";
+        public static string SoxPath = @"/usr/bin";
 #endif
 #if MACOS
-		public string SoxPath = @"/opt/local/bin";
+        public static string SoxPath = @"/opt/local/bin";
 #endif
 
         internal List<byte> _data;
@@ -441,11 +439,11 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
             {
                 using (var reader = new BinaryReader(fs))
                 {
-					/*var riffID =*/ reader.ReadBytes(4);
+                    /*var riffID =*/ reader.ReadBytes(4);
                     var fileSize = reader.ReadInt32();
-					/*var wavID =*/ reader.ReadBytes(4);
-					/*var fmtID =*/ reader.ReadBytes(4);
-					/*var fmtSize =*/ reader.ReadUInt32();
+                    /*var wavID =*/ reader.ReadBytes(4);
+                    /*var fmtID =*/ reader.ReadBytes(4);
+                    /*var fmtSize =*/ reader.ReadUInt32();
                     var fmtCode = reader.ReadUInt16();
                     var channels = reader.ReadUInt16();
                     var sampleRate = reader.ReadUInt32();
