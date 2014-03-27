@@ -26,7 +26,10 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
     {
 		/// <summary>
 		/// The path to the sox binary.
-		/// </summary>
+        /// </summary>
+#if WINDOWS
+        public static string SoxPath = @"/usr/bin";
+#endif
 #if LINUX
         public static string SoxPath = @"/usr/bin";
 #endif
@@ -88,6 +91,16 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
         /// </summary>
         /// <value>The number of samples to the start of the loop.</value>
         public int LoopStart { get { return _loopStart; } }
+
+#if WINDOWS
+        static AudioContent()
+        {
+            var programFiles = System.Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            if (System.Environment.Is64BitOperatingSystem)
+                programFiles = System.Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            SoxPath = Path.Combine(programFiles, "sox");
+        }
+#endif
 
         /// <summary>
         /// Initializes a new instance of AudioContent.
@@ -371,7 +384,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
                         if (process.ExitCode != 0)
                             throw new InvalidContentException("Failed to convert " + _fileName + " to Vorbis format");
                     }
-#else
+#elif MACOS
                     if (!ConvertAudio.Convert(fileName, targetFileName, AudioFormatType.MPEG4AAC, MonoMac.AudioToolbox.AudioFileType.MPEG4, quality))
                         throw new InvalidDataException("Failed to convert to AAC");
 #endif
