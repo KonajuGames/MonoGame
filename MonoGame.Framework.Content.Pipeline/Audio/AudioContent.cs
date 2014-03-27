@@ -26,21 +26,18 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
     {
 		/// <summary>
 		/// The path to the sox binary.
-        /// </summary>
-#if WINDOWS
-        public static string SoxPath = @"/usr/bin";
-#endif
+		/// </summary>
 #if LINUX
         public static string SoxPath = @"/usr/bin";
 #endif
 #if MACOS
         public static string SoxPath = @"/opt/local/bin";
 #endif
+#if WINDOWS
+        public static string SoxPath;
+#endif
 
         internal List<byte> _data;
-#if WINDOWS
-        WaveStream _reader;
-#endif
         TimeSpan _duration;
         string _fileName;
         AudioFileType _fileType;
@@ -48,6 +45,9 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
         int _loopLength;
         int _loopStart;
         bool _disposed;
+#if WINDOWS
+        WaveStream _reader;
+#endif
 
         /// <summary>
         /// Gets the raw audio data.
@@ -377,7 +377,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
                     break;
 
                 case ConversionFormat.Vorbis:
-#if LINUX
+#if LINUX || WINDOWS
                     using (var process = Process.Start(Path.Combine(SoxPath, "sox"), _fileName + " " + targetFileName))
                     {
                         process.WaitForExit();
