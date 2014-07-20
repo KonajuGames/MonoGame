@@ -5,21 +5,22 @@ using Xwt.Drawing;
 
 namespace MonoGame.Tools.Pipeline
 {
-    class OutputTextView : TextEntry
+	class OutputXwt : TextEntry, IOutput
     {
         private StringBuilder _textBuilder;
 
-        public OutputTextView()
+        public OutputXwt()
             : base()
         {
             ReadOnly = true;
-            ShowFrame = true;
+			ShowFrame = false;
             MultiLine = true;
+			//HeightRequest = (double)500;
             ExpandHorizontal = true;
-            ExpandVertical = true;
+			//ExpandVertical = true;
 			TextAlignment = Alignment.Start;
 
-            var faces = new[] { "Consolas", "Lucida Console", "Courier New" };
+			var faces = new[] { "Consolas", "Lucida Console", "Courier New", "Monospace" };
             for (var f = 0; f < faces.Length; f++)
             {
                 this.Font = Font.FromName(faces[f]).WithScaledSize(0.9).WithStyle(FontStyle.Normal);

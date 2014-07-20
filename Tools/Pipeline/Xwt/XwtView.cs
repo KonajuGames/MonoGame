@@ -238,7 +238,6 @@ namespace MonoGame.Tools.Pipeline
 			bool result = dlg.Run();
 			files = new List<string>(dlg.FileNames);
 			return result;
-			throw new NotImplementedException();
 		}
 
 		#endregion
@@ -258,7 +257,7 @@ namespace MonoGame.Tools.Pipeline
 		private bool _treeUpdating;
 		private bool _treeSort;
 
-		OutputTextView _outputWindow;
+		IOutput _outputWindow;
 
 		/// <summary>
 		/// Generates the UI
@@ -554,6 +553,7 @@ namespace MonoGame.Tools.Pipeline
             _treeView = new TreeView(_store)
             {
 				HeadersVisible = false,
+				MinHeight = 100
 			};
             _treeView.Columns.Add("Name", imgCol, nameCol);
             
@@ -565,12 +565,19 @@ namespace MonoGame.Tools.Pipeline
             leftPane.Panel1.Content = _treeView;
 
             // Placeholder vbox until a property grid is in place
-            leftPane.Panel2.Content = new VBox();
+			leftPane.Panel2.Content = new PropertyGrid ();
 
 			mainPaned.Panel1.Content = leftPane;
-			_outputWindow = new OutputTextView();
 
-			mainPaned.Panel2.Content = _outputWindow;
+			_outputWindow = new OutputDraw ();
+			var outputScroll = new ScrollView (_outputWindow as Widget);
+
+			// For debug pourposes.
+			for (int i = 0; i < 20; i++) {
+				_outputWindow.Append ("This is a very, very, very, very long text. This is a very, very, very, very long text. This is a very, very, very, very long text. \n");
+			}
+
+			mainPaned.Panel2.Content = outputScroll;
 			Content = mainPaned;
 
             // Make the left pane 1/3 of the width by default

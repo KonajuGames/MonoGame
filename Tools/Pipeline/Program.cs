@@ -37,7 +37,7 @@ namespace MonoGame.Tools.Pipeline
             Application.Run(view);
 #endif
 #if XWT
-			Application.Initialize(ToolkitType.Wpf);
+			Application.Initialize();
 
 			var view = new XwtView();
             if (args != null && args.Length > 0)
