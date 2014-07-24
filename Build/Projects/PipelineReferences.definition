@@ -33,8 +33,8 @@
       Name="Nvidia.TextureTools"
       Path="ThirdParty\Dependencies\NVTT\Windows\Nvidia.TextureTools.dll" />
     <Binary
-      Name="SharpFont"
-      Path="ThirdParty\Dependencies\SharpFont\x64\SharpFont.dll" />
+      Name="TrueTypeSharp"
+      Path="ThirdParty\Dependencies\TrueTypeSharp\TrueTypeSharp.dll" />
     <Binary
       Name="ManagedPVRTC"
       Path="ThirdParty\Dependencies\ManagedPVRTC\ManagedPVRTC.dll" />

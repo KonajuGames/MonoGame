@@ -119,8 +119,11 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Processors
 			// Which importer knows how to read this source font?
 			IFontImporter importer;
 
+#if MACOS
+            importer = new TrueTypeSharpImporter();
+#else
 			var TrueTypeFileExtensions = new List<string> { ".ttf", ".ttc", ".otf" };
-			var BitmapFileExtensions = new List<string> { ".bmp", ".png", ".gif" };
+			//var BitmapFileExtensions = new List<string> { ".bmp", ".png", ".gif" };
 
 			string fileExtension = Path.GetExtension(fontName).ToLowerInvariant();
 
@@ -139,6 +142,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Processors
 				//importer = new TrueTypeImporter();
 				importer = new SharpFontImporter ();
 			}
+#endif
 
 			// Import the source font data.
 			importer.Import(options, fontName);
