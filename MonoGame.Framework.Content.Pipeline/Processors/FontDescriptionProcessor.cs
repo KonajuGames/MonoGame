@@ -8,7 +8,6 @@ using System.Drawing;
 using System.IO;
 using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
 using System.Linq;
-using SharpFont;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using MonoGame.Framework.Content.Pipeline.Builder;
