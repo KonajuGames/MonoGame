@@ -16,6 +16,9 @@
       Name="SharpFont"
       Path="ThirdParty\Dependencies\SharpFont\x64\SharpFont.dll" />
     <Binary
+      Name="TrueTypeSharp"
+      Path="ThirdParty\Dependencies\TrueTypeSharp\TrueTypeSharp.dll" />
+    <Binary
       Name="ManagedPVRTC"
       Path="ThirdParty\Dependencies\ManagedPVRTC\ManagedPVRTC.dll" />
   </Platform>
@@ -60,6 +63,9 @@
     <Binary
       Name="SharpFont"
       Path="ThirdParty\Dependencies\SharpFont\x64\SharpFont.dll" />
+    <Binary
+      Name="TrueTypeSharp"
+      Path="ThirdParty\Dependencies\TrueTypeSharp\TrueTypeSharp.dll" />
     <Binary
       Name="ManagedPVRTC"
       Path="ThirdParty\Dependencies\ManagedPVRTC\ManagedPVRTC.dll" />

@@ -21,7 +21,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Graphics
             var characters = CharacterRegion.Flatten(options.CharacterRegions);
 
             // Convert points to pixels as pointSize * 96 / 72
-            float pixelHeight = options.Size * 96 / 72;
+            float pixelHeight = options.Size * 110 / 72;
             float scale = font.GetScaleForPixelHeight(pixelHeight);
 
             float lineAscender, lineDescender, lineGap;
@@ -62,7 +62,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Graphics
                 var abc = new ABCFloat();
                 abc.A = leftSideBearing;
                 abc.B = width;
-                abc.C = (advanceWidth) - (abc.A + abc.B);
+                abc.C = advanceWidth - (abc.A + abc.B);
 
                 // Construct the output Glyph object.
                 var glyph = new Glyph(ch, bitmap)
@@ -78,7 +78,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Graphics
             Glyphs = glyphList;
 
             // Store the font height.
-            LineSpacing = lineGap;
+            LineSpacing = lineAscender + -lineDescender + lineGap;
         }
 
         public IEnumerable<Glyph> Glyphs { get; private set; }
