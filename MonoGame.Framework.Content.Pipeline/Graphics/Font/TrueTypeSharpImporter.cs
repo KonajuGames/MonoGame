@@ -17,23 +17,25 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Graphics
         {
             var font = new TrueTypeFont(fontName);
 
-            // Which characters do we want to include?
-            var characters = CharacterRegion.Flatten(options.CharacterRegions);
-
             // Convert points to pixels as pointSize * 96 / 72
-            float pixelHeight = options.Size * 110 / 72;
-            float scale = font.GetScaleForPixelHeight(pixelHeight);
+            float pixelHeight = options.Size * 96.0f / 72.0f;
+            float scale = font.GetScaleForMappingEmToPixels(pixelHeight);
 
-            float lineAscender, lineDescender, lineGap;
-            font.GetFontVMetricsAtScale(pixelHeight, out lineAscender, out lineDescender, out lineGap);
+            int lineAscenderI, lineDescenderI, lineGapI;
+            font.GetFontVMetrics(out lineAscenderI, out lineDescenderI, out lineGapI);
+            float lineAscender = lineAscenderI * scale;
+            float lineDescender = lineDescenderI * scale;
+            float lineGap = lineGapI * scale;
+
+            YOffsetMin = -(int)Math.Round(lineAscender);
 
             var glyphList = new List<Glyph>();
             // Rasterize each character in turn.
-            foreach (char ch in characters)
+            foreach (char ch in options.Characters)
             {
                 int width, height, xOffset, yOffset;
 
-                uint index = font.FindGlyphIndex(ch);
+                int index = font.FindGlyphIndex(ch);
                 byte[] data = font.GetGlyphBitmap(index, scale, scale, out width, out height, out xOffset, out yOffset);
                 if (data.Length == 0 || width == 0 || height == 0)
                 {
@@ -49,14 +51,15 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Graphics
                     for (int x = 0; x < width; x++)
                     {
                         byte opacity = data[y * width + x];
-                        bitmap.SetPixel(x, y, System.Drawing.Color.FromArgb(opacity, 0xff, 0xff, 0xff));
+                        // Set pixel in pre-multiplied format
+                        bitmap.SetPixel(x, y, System.Drawing.Color.FromArgb(opacity, opacity, opacity, opacity));
                     }
                 }
 
-                int advanceWidth, leftSideBearing;
-                font.GetGlyphHMetrics(index, out advanceWidth, out leftSideBearing);
-                advanceWidth = (int)(advanceWidth * scale);
-                leftSideBearing = (int)(leftSideBearing * scale);
+                int advanceWidthI, leftSideBearingI;
+                font.GetGlyphHMetrics(index, out advanceWidthI, out leftSideBearingI);
+                float advanceWidth = advanceWidthI * scale;
+                float leftSideBearing = leftSideBearingI * scale;
 
                 // not sure about this at all
                 var abc = new ABCFloat();
@@ -84,6 +87,8 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Graphics
         public IEnumerable<Glyph> Glyphs { get; private set; }
 
         public float LineSpacing { get; private set; }
+
+        public int YOffsetMin { get; private set; }
 
         #endregion
 	}
