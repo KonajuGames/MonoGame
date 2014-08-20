@@ -5,13 +5,15 @@
 using System;
 using System.Text;
 using System.Runtime.Serialization;
+using System.Diagnostics;
 
 namespace Microsoft.Xna.Framework
 {
     /// <summary>
-    /// Describe a 32-bit packed color.
+    /// Describes a 32-bit packed color.
     /// </summary>
     [DataContract]
+    [DebuggerDisplay("{DebugDisplayString,nq}")]
     public struct Color : IEquatable<Color>
     {
         static Color()
@@ -393,11 +395,11 @@ namespace Microsoft.Xna.Framework
         {
             return !(a == b);
         }
-	
-	/// <summary>
-        /// Gets the hash code for <see cref="Color"/> instance.
+
+        /// <summary>
+        /// Gets the hash code of this <see cref="Color"/>.
         /// </summary>
-        /// <returns>Hash code of the object.</returns>
+        /// <returns>Hash code of this <see cref="Color"/>.</returns>
         public override int GetHashCode()
         {
             return this._packedValue.GetHashCode();
@@ -1728,21 +1730,21 @@ namespace Microsoft.Xna.Framework
 	public static Color operator *(Color value, float scale)
         {
             return new Color((int)(value.R * scale), (int)(value.G * scale), (int)(value.B * scale), (int)(value.A * scale));
-        }		
+        }
 
-	/// <summary>
-        /// Converts <see cref="Color"/> to <see cref="Vector3"/>.
-        /// </summary>
-        /// <returns>Converted color.</returns>
+    /// <summary>
+    /// Gets a three-component <see cref="Vector3"/> representation for this object.
+    /// </summary>
+    /// <returns>A three-component <see cref="Vector3"/> representation for this object.</returns>
         public Vector3 ToVector3()
         {
             return new Vector3(R / 255.0f, G / 255.0f, B / 255.0f);
         }
-	
-	/// <summary>
-        /// Converts <see cref="Color"/> to <see cref="Vector4"/>.
+
+        /// <summary>
+        /// Gets a four-component <see cref="Vector4"/> representation for this object.
         /// </summary>
-        /// <returns>Converted color.</returns>
+        /// <returns>A four-component <see cref="Vector4"/> representation for this object.</returns>
         public Vector4 ToVector4()
         {
             return new Vector4(R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f);
@@ -1757,11 +1759,27 @@ namespace Microsoft.Xna.Framework
             get { return _packedValue; }
             set { _packedValue = value; }
         }
-	
-	/// <summary>
-        /// Converts the color values of this instance to its equivalent string representation.
+
+
+        internal string DebugDisplayString
+        {
+            get
+            {
+                return string.Concat(
+                    this.R.ToString(), "  ",
+                    this.G.ToString(), "  ",
+                    this.B.ToString(), "  ",
+                    this.A.ToString()
+                );
+            }
+        }
+
+
+        /// <summary>
+        /// Returns a <see cref="String"/> representation of this <see cref="Color"/> in the format:
+        /// {R:[red] G:[green] B:[blue] A:[alpha]}
         /// </summary>
-        /// <returns>The string representation of the color value of this instance.</returns>
+        /// <returns><see cref="String"/> representation of this <see cref="Color"/>.</returns>
 	public override string ToString ()
 	{
         StringBuilder sb = new StringBuilder(25);

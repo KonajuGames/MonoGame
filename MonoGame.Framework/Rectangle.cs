@@ -4,10 +4,12 @@
 
 using System;
 using System.Runtime.Serialization;
+using System.Diagnostics;
 
 namespace Microsoft.Xna.Framework
 {
     [DataContract]
+    [DebuggerDisplay("{DebugDisplayString,nq}")]
     public struct Rectangle : IEquatable<Rectangle>
     {
         #region Private Fields
@@ -90,6 +92,14 @@ namespace Microsoft.Xna.Framework
 
         #region Constructors
 
+        /// <summary>
+        /// Creates a <see cref="Rectangle"/> with the specified
+        /// position, width, and height.
+        /// </summary>
+        /// <param name="x">The x coordinate of the top-left corner of the created <see cref="Rectangle"/>.</param>
+        /// <param name="y">The y coordinate of the top-left corner of the created <see cref="Rectangle"/>.</param>
+        /// <param name="width">The width of the created <see cref="Rectangle"/>.</param>
+        /// <param name="height">The height of the created <see cref="Rectangle"/>.</param>
         public Rectangle(int x, int y, int width, int height)
         {
             this.X = x;
@@ -107,26 +117,54 @@ namespace Microsoft.Xna.Framework
             return ((a.X == b.X) && (a.Y == b.Y) && (a.Width == b.Width) && (a.Height == b.Height));
         }
 
+        /// <summary>
+        /// Gets whether or not the provided coordinates lie within the bounds of this <see cref="Rectangle"/>.
+        /// </summary>
+        /// <param name="x">The x coordinate of the point to check for containment.</param>
+        /// <param name="y">The y coordinate of the point to check for containment.</param>
+        /// <returns>True if the provided coordinates lie inside this <see cref="Rectangle"/>. False otherwise.</returns>
 		public bool Contains(int x, int y)
         {
             return ((((this.X <= x) && (x < (this.X + this.Width))) && (this.Y <= y)) && (y < (this.Y + this.Height)));
         }
 
+        /// <summary>
+        /// Gets whether or not the provided coordinates lie within the bounds of this <see cref="Rectangle"/>.
+        /// </summary>
+        /// <param name="x">The x coordinate of the point to check for containment.</param>
+        /// <param name="y">The y coordinate of the point to check for containment.</param>
+        /// <returns>True if the provided coordinates lie inside this <see cref="Rectangle"/>. False otherwise.</returns>
         public bool Contains(float x, float y)
         {
             return ((((this.X <= x) && (x < (this.X + this.Width))) && (this.Y <= y)) && (y < (this.Y + this.Height)));
         }
 		
+
+        /// <summary>
+        /// Gets whether or not the provided <see cref="Point"/> lies within the bounds of this <see cref="Rectangle"/>.
+        /// </summary>
+        /// <param name="value">The coordinates to check for inclusion in this <see cref="Rectangle"/>.</param>
+        /// <returns>True if the provided <see cref="Point"/> lies inside this <see cref="Rectangle"/>. False otherwise.</returns>
         public bool Contains(Point value)
         {
             return ((((this.X <= value.X) && (value.X < (this.X + this.Width))) && (this.Y <= value.Y)) && (value.Y < (this.Y + this.Height)));
         }
 
+        /// <summary>
+        /// Gets whether or not the provided <see cref="Vector2"/> lies within the bounds of this <see cref="Rectangle"/>.
+        /// </summary>
+        /// <param name="value">The coordinates to check for inclusion in this <see cref="Rectangle"/>.</param>
+        /// <returns>True if the provided <see cref="Vector2"/> lies inside this <see cref="Rectangle"/>. False otherwise.</returns>
         public bool Contains(Vector2 value)
         {
             return ((((this.X <= value.X) && (value.X < (this.X + this.Width))) && (this.Y <= value.Y)) && (value.Y < (this.Y + this.Height)));
         }
 
+        /// <summary>
+        /// Gets whether or not the provided <see cref="Rectangle"/> lies within the bounds of this <see cref="Rectangle"/>.
+        /// </summary>
+        /// <param name="value">The <see cref="Rectangle"/> to check for inclusion in this <see cref="Rectangle"/>.</param>
+        /// <returns>True if the provided <see cref="Rectangle"/>'s bounds lie entirely inside this <see cref="Rectangle"/>. False otherwise.</returns>
         public bool Contains(Rectangle value)
         {
             return ((((this.X <= value.X) && ((value.X + value.Width) <= (this.X + this.Width))) && (this.Y <= value.Y)) && ((value.Y + value.Height) <= (this.Y + this.Height)));
@@ -137,18 +175,32 @@ namespace Microsoft.Xna.Framework
             return !(a == b);
         }
 
+        /// <summary>
+        /// Increments this <see cref="Rectangle"/>'s <see cref="Location"/> by the
+        /// x and y components of the provided <see cref="Point"/>.
+        /// </summary>
+        /// <param name="offset">The x and y components to add to this <see cref="Rectangle"/>'s <see cref="Position"/>.</param>
         public void Offset(Point offset)
         {
             X += offset.X;
             Y += offset.Y;
         }
 
+        /// <summary>
+        /// Increments this <see cref="Rectangle"/>'s <see cref="Location"/> by the
+        /// provided x and y coordinates.
+        /// </summary>
+        /// <param name="offsetX">The x coordinate to add to this <see cref="Rectangle"/>'s <see cref="Location"/>.</param>
+        /// <param name="offsetY">The y coordinate to add to this <see cref="Rectangle"/>'s <see cref="Location"/>.</param>
         public void Offset(int offsetX, int offsetY)
         {
             X += offsetX;
             Y += offsetY;
         }
-		
+
+        /// <summary>
+        /// The top-left coordinates of this <see cref="Rectangle"/>.
+        /// </summary>
 		public Point Location
 		{
 			get 
@@ -162,6 +214,13 @@ namespace Microsoft.Xna.Framework
 			}
 		}
 		
+        /// <summary>
+        /// A <see cref="Point"/> located in the center of this <see cref="Rectangle"/>'s bounds.
+        /// </summary>
+        /// <remarks>
+        /// If <see cref="Width"/> or <see cref="Height"/> is an odd number,
+        /// the center point will be rounded down.
+        /// </remarks>
 		public Point Center
 		{
 			get 
@@ -178,6 +237,10 @@ namespace Microsoft.Xna.Framework
             Height += verticalValue * 2;
         }
 		
+        /// <summary>
+        /// Whether or not this <see cref="Rectangle"/> has a width and
+        /// height of 0, and a position of (0, 0).
+        /// </summary>
 		public bool IsEmpty
         {
             get
@@ -186,14 +249,46 @@ namespace Microsoft.Xna.Framework
             }
         }
 
+        /// <summary>
+        /// Checks whether or not this <see cref="Rectangle"/> is equivalent
+        /// to a provided <see cref="Rectangle"/>.
+        /// </summary>
+        /// <param name="obj">The <see cref="Rectangle"/> to test for equality.</param>
+        /// <returns>
+        /// True if this <see cref="Rectangle"/>'s x coordinate, y coordinate, width, and height
+        /// match the values for the provided <see cref="Rectangle"/>. False otherwise.
+        /// </returns>
         public bool Equals(Rectangle other)
         {
             return this == other;
         }
 
+        /// <summary>
+        /// Checks whether or not this <see cref="Rectangle"/> is equivalent
+        /// to a provided object.
+        /// </summary>
+        /// <param name="obj">The <see cref="object"/> to test for equality.</param>
+        /// <returns>
+        /// True if the provided object is a <see cref="Rectangle"/>, and this
+        /// <see cref="Rectangle"/>'s x coordinate, y coordinate, width, and height
+        /// match the values for the provided <see cref="Rectangle"/>. False otherwise.
+        /// </returns>
         public override bool Equals(object obj)
         {
             return (obj is Rectangle) ? this == ((Rectangle)obj) : false;
+        }
+
+        internal string DebugDisplayString
+        {
+            get
+            {
+                return string.Concat(
+                    this.X, "  ",
+                    this.Y, "  ",
+                    this.Width, "  ",
+                    this.Height
+                    );
+            }
         }
 
         /// <remarks>
