@@ -554,6 +554,9 @@ namespace Microsoft.Xna.Framework.Graphics
 
             // Get Direct3D 11.1 context
             _d3dContext = _d3dDevice.ImmediateContext.QueryInterface<SharpDX.Direct3D11.DeviceContext>();
+
+            var featureLevel = _d3dDevice.FeatureLevel;
+            MaxVertexBufferSlots = featureLevel >= FeatureLevel.Level_11_0 ? SharpDX.Direct3D11.InputAssemblerStage.VertexInputResourceSlotCount : 16;
         }
 
         internal void CreateSizeDependentResources()

@@ -28,6 +28,7 @@ namespace Microsoft.Xna.Framework.Graphics
   
         private VertexBuffer _vertexBuffer;
         private bool _vertexBufferDirty;
+        private VertexBufferBinding[] _vertexBufferBindings;
 
         private IndexBuffer _indexBuffer;
         private bool _indexBufferDirty;
@@ -92,6 +93,7 @@ namespace Microsoft.Xna.Framework.Graphics
         }
 
         internal int MaxTextureSlots;
+        internal int MaxVertexBufferSlots = 1;
 
         public bool IsDisposed
         {
