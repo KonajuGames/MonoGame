@@ -1,45 +1,16 @@
-#region License
-/*
-MIT License
-Copyright © 2006 The Mono.Xna Team
-
-All rights reserved.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-#endregion License
+// MIT License - Copyright (C) The Mono.Xna Team
+// This file is subject to the terms and conditions defined in
+// file 'LICENSE.txt', which is part of this source code package.
 
 using System;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
-#if WINRT
 using System.Runtime.Serialization;
-#endif
 
 namespace Microsoft.Xna.Framework
 {
-    #if WINRT
     [DataContract]
-    #else
-    [Serializable]
-    #endif
+    [DebuggerDisplay("{DebugDisplayString,nq}")]
     public struct Vector3 : IEquatable<Vector3>
     {
         #region Private Fields
@@ -60,17 +31,14 @@ namespace Microsoft.Xna.Framework
 
 
         #region Public Fields
-#if WINRT
+        
         [DataMember]
-#endif
         public float X;
-#if WINRT
+      
         [DataMember]
-#endif
         public float Y;
-#if WINRT
+      
         [DataMember]
-#endif
         public float Z;
 
         #endregion Public Fields
@@ -78,26 +46,41 @@ namespace Microsoft.Xna.Framework
 
         #region Properties
 
+        /// <summary>
+        /// Returns a <see>Vector3</see> with components 0, 0, 0.
+        /// </summary>
         public static Vector3 Zero
         {
             get { return zero; }
         }
 
+        /// <summary>
+        /// Returns a <see>Vector3</see> with components 1, 1, 1.
+        /// </summary>
         public static Vector3 One
         {
             get { return one; }
         }
 
+        /// <summary>
+        /// Returns a <see>Vector3</see> with components 1, 0, 0.
+        /// </summary>
         public static Vector3 UnitX
         {
             get { return unitX; }
         }
 
+        /// <summary>
+        /// Returns a <see>Vector3</see> with components 0, 1, 0.
+        /// </summary>
         public static Vector3 UnitY
         {
             get { return unitY; }
         }
 
+        /// <summary>
+        /// Returns a <see>Vector3</see> with components 0, 0, 1.
+        /// </summary>
         public static Vector3 UnitZ
         {
             get { return unitZ; }
@@ -167,6 +150,12 @@ namespace Microsoft.Xna.Framework
 
         #region Public Methods
 
+        /// <summary>
+        /// Performs vector addition on <paramref name="value1"/> and <paramref name="value2"/>.
+        /// </summary>
+        /// <param name="value1">The first vector to add.</param>
+        /// <param name="value2">The second vector to add.</param>
+        /// <returns>The result of the vector addition.</returns>
         public static Vector3 Add(Vector3 value1, Vector3 value2)
         {
             value1.X += value2.X;
@@ -175,6 +164,14 @@ namespace Microsoft.Xna.Framework
             return value1;
         }
 
+        /// <summary>
+        /// Performs vector addition on <paramref name="value1"/> and
+        /// <paramref name="value2"/>, storing the result of the
+        /// addition in <paramref name="result"/>.
+        /// </summary>
+        /// <param name="value1">The first vector to add.</param>
+        /// <param name="value2">The second vector to add.</param>
+        /// <param name="result">The result of the vector addition.</param>
         public static void Add(ref Vector3 value1, ref Vector3 value2, out Vector3 result)
         {
             result.X = value1.X + value2.X;
@@ -192,10 +189,9 @@ namespace Microsoft.Xna.Framework
 
         public static void Barycentric(ref Vector3 value1, ref Vector3 value2, ref Vector3 value3, float amount1, float amount2, out Vector3 result)
         {
-            result = new Vector3(
-                MathHelper.Barycentric(value1.X, value2.X, value3.X, amount1, amount2),
-                MathHelper.Barycentric(value1.Y, value2.Y, value3.Y, amount1, amount2),
-                MathHelper.Barycentric(value1.Z, value2.Z, value3.Z, amount1, amount2));
+            result.X = MathHelper.Barycentric(value1.X, value2.X, value3.X, amount1, amount2);
+            result.Y = MathHelper.Barycentric(value1.Y, value2.Y, value3.Y, amount1, amount2);
+            result.Z = MathHelper.Barycentric(value1.Z, value2.Z, value3.Z, amount1, amount2);
         }
 
         public static Vector3 CatmullRom(Vector3 value1, Vector3 value2, Vector3 value3, Vector3 value4, float amount)
@@ -208,10 +204,9 @@ namespace Microsoft.Xna.Framework
 
         public static void CatmullRom(ref Vector3 value1, ref Vector3 value2, ref Vector3 value3, ref Vector3 value4, float amount, out Vector3 result)
         {
-            result = new Vector3(
-                MathHelper.CatmullRom(value1.X, value2.X, value3.X, value4.X, amount),
-                MathHelper.CatmullRom(value1.Y, value2.Y, value3.Y, value4.Y, amount),
-                MathHelper.CatmullRom(value1.Z, value2.Z, value3.Z, value4.Z, amount));
+            result.X = MathHelper.CatmullRom(value1.X, value2.X, value3.X, value4.X, amount);
+            result.Y = MathHelper.CatmullRom(value1.Y, value2.Y, value3.Y, value4.Y, amount);
+            result.Z = MathHelper.CatmullRom(value1.Z, value2.Z, value3.Z, value4.Z, amount);
         }
 
         public static Vector3 Clamp(Vector3 value1, Vector3 min, Vector3 max)
@@ -224,10 +219,9 @@ namespace Microsoft.Xna.Framework
 
         public static void Clamp(ref Vector3 value1, ref Vector3 min, ref Vector3 max, out Vector3 result)
         {
-            result = new Vector3(
-                MathHelper.Clamp(value1.X, min.X, max.X),
-                MathHelper.Clamp(value1.Y, min.Y, max.Y),
-                MathHelper.Clamp(value1.Z, min.Z, max.Z));
+            result.X = MathHelper.Clamp(value1.X, min.X, max.X);
+            result.Y = MathHelper.Clamp(value1.Y, min.Y, max.Y);
+            result.Z = MathHelper.Clamp(value1.Z, min.Z, max.Z);
         }
 
         public static Vector3 Cross(Vector3 vector1, Vector3 vector2)
@@ -238,9 +232,12 @@ namespace Microsoft.Xna.Framework
 
         public static void Cross(ref Vector3 vector1, ref Vector3 vector2, out Vector3 result)
         {
-            result = new Vector3(vector1.Y * vector2.Z - vector2.Y * vector1.Z,
-                                 -(vector1.X * vector2.Z - vector2.X * vector1.Z),
-                                 vector1.X * vector2.Y - vector2.X * vector1.Y);
+            var x = vector1.Y * vector2.Z - vector2.Y * vector1.Z;
+            var y = -(vector1.X * vector2.Z - vector2.X * vector1.Z);
+            var z = vector1.X * vector2.Y - vector2.X * vector1.Y;
+            result.X = x;
+            result.Y = y;
+            result.Z = z;
         }
 
         public static float Distance(Vector3 vector1, Vector3 vector2)
@@ -314,12 +311,20 @@ namespace Microsoft.Xna.Framework
 
         public override bool Equals(object obj)
         {
-            return (obj is Vector3) ? this == (Vector3)obj : false;
+            if (!(obj is Vector3))
+                return false;
+
+            var other = (Vector3)obj;
+            return  X == other.X &&
+                    Y == other.Y &&
+                    Z == other.Z;
         }
 
         public bool Equals(Vector3 other)
         {
-            return this == other;
+            return  X == other.X && 
+                    Y == other.Y &&
+                    Z == other.Z;
         }
 
         public override int GetHashCode()
@@ -365,12 +370,11 @@ namespace Microsoft.Xna.Framework
 
         public static void Lerp(ref Vector3 value1, ref Vector3 value2, float amount, out Vector3 result)
         {
-            result = new Vector3(
-                MathHelper.Lerp(value1.X, value2.X, amount),
-                MathHelper.Lerp(value1.Y, value2.Y, amount),
-                MathHelper.Lerp(value1.Z, value2.Z, amount));
+            result.X = MathHelper.Lerp(value1.X, value2.X, amount);
+            result.Y = MathHelper.Lerp(value1.Y, value2.Y, amount);
+            result.Z = MathHelper.Lerp(value1.Z, value2.Z, amount);
         }
-                
+
         public static Vector3 Max(Vector3 value1, Vector3 value2)
         {
             return new Vector3(
@@ -381,10 +385,9 @@ namespace Microsoft.Xna.Framework
 
         public static void Max(ref Vector3 value1, ref Vector3 value2, out Vector3 result)
         {
-            result = new Vector3(
-                MathHelper.Max(value1.X, value2.X),
-                MathHelper.Max(value1.Y, value2.Y),
-                MathHelper.Max(value1.Z, value2.Z));
+            result.X = MathHelper.Max(value1.X, value2.X);
+            result.Y = MathHelper.Max(value1.Y, value2.Y);
+            result.Z = MathHelper.Max(value1.Z, value2.Z);
         }
 
         public static Vector3 Min(Vector3 value1, Vector3 value2)
@@ -397,10 +400,9 @@ namespace Microsoft.Xna.Framework
 
         public static void Min(ref Vector3 value1, ref Vector3 value2, out Vector3 result)
         {
-            result = new Vector3(
-                MathHelper.Min(value1.X, value2.X),
-                MathHelper.Min(value1.Y, value2.Y),
-                MathHelper.Min(value1.Z, value2.Z));
+            result.X = MathHelper.Min(value1.X, value2.X);
+            result.Y = MathHelper.Min(value1.Y, value2.Y);
+            result.Z = MathHelper.Min(value1.Z, value2.Z);
         }
 
         public static Vector3 Multiply(Vector3 value1, Vector3 value2)
@@ -433,15 +435,29 @@ namespace Microsoft.Xna.Framework
             result.Z = value1.Z * value2.Z;
         }
 
+        /// <summary>
+        /// Returns a <see>Vector3</see> pointing in the opposite
+        /// direction of <paramref name="value"/>.
+        /// </summary>
+        /// <param name="value">The vector to negate.</param>
+        /// <returns>The vector negation of <paramref name="value"/>.</returns>
         public static Vector3 Negate(Vector3 value)
         {
             value = new Vector3(-value.X, -value.Y, -value.Z);
             return value;
         }
 
+        /// <summary>
+        /// Stores a <see>Vector3</see> pointing in the opposite
+        /// direction of <paramref name="value"/> in <paramref name="result"/>.
+        /// </summary>
+        /// <param name="value">The vector to negate.</param>
+        /// <param name="result">The vector that the negation of <paramref name="value"/> will be stored in.</param>
         public static void Negate(ref Vector3 value, out Vector3 result)
         {
-            result = new Vector3(-value.X, -value.Y, -value.Z);
+            result.X = -value.X;
+            result.Y = -value.Y;
+            result.Z = -value.Z;
         }
 
         public void Normalize()
@@ -465,35 +481,34 @@ namespace Microsoft.Xna.Framework
             result.Z = value.Z * factor;
         }
 
-	public static Vector3 Reflect(Vector3 vector, Vector3 normal)
-	{
-		// I is the original array
-		// N is the normal of the incident plane
-		// R = I - (2 * N * ( DotProduct[ I,N] ))
-		Vector3 reflectedVector;
-		// inline the dotProduct here instead of calling method
-		float dotProduct = ((vector.X * normal.X) + (vector.Y * normal.Y)) + (vector.Z * normal.Z);
-		reflectedVector.X = vector.X - (2.0f * normal.X) * dotProduct;
-		reflectedVector.Y = vector.Y - (2.0f * normal.Y) * dotProduct;
-		reflectedVector.Z = vector.Z - (2.0f * normal.Z) * dotProduct;
+        public static Vector3 Reflect(Vector3 vector, Vector3 normal)
+        {
+            // I is the original array
+            // N is the normal of the incident plane
+            // R = I - (2 * N * ( DotProduct[ I,N] ))
+            Vector3 reflectedVector;
+            // inline the dotProduct here instead of calling method
+            float dotProduct = ((vector.X * normal.X) + (vector.Y * normal.Y)) + (vector.Z * normal.Z);
+            reflectedVector.X = vector.X - (2.0f * normal.X) * dotProduct;
+            reflectedVector.Y = vector.Y - (2.0f * normal.Y) * dotProduct;
+            reflectedVector.Z = vector.Z - (2.0f * normal.Z) * dotProduct;
 
-		return reflectedVector;
-	}
+            return reflectedVector;
+        }
 
-	public static void Reflect(ref Vector3 vector, ref Vector3 normal, out Vector3 result)
-	{
-		// I is the original array
-		// N is the normal of the incident plane
-		// R = I - (2 * N * ( DotProduct[ I,N] ))
+        public static void Reflect(ref Vector3 vector, ref Vector3 normal, out Vector3 result)
+        {
+            // I is the original array
+            // N is the normal of the incident plane
+            // R = I - (2 * N * ( DotProduct[ I,N] ))
 
-		// inline the dotProduct here instead of calling method
-		float dotProduct = ((vector.X * normal.X) + (vector.Y * normal.Y)) + (vector.Z * normal.Z);
-		result.X = vector.X - (2.0f * normal.X) * dotProduct;
-		result.Y = vector.Y - (2.0f * normal.Y) * dotProduct;
-		result.Z = vector.Z - (2.0f * normal.Z) * dotProduct;
+            // inline the dotProduct here instead of calling method
+            float dotProduct = ((vector.X * normal.X) + (vector.Y * normal.Y)) + (vector.Z * normal.Z);
+            result.X = vector.X - (2.0f * normal.X) * dotProduct;
+            result.Y = vector.Y - (2.0f * normal.Y) * dotProduct;
+            result.Z = vector.Z - (2.0f * normal.Z) * dotProduct;
+        }
 
-	}
-		
         public static Vector3 SmoothStep(Vector3 value1, Vector3 value2, float amount)
         {
             return new Vector3(
@@ -504,12 +519,17 @@ namespace Microsoft.Xna.Framework
 
         public static void SmoothStep(ref Vector3 value1, ref Vector3 value2, float amount, out Vector3 result)
         {
-            result = new Vector3(
-                MathHelper.SmoothStep(value1.X, value2.X, amount),
-                MathHelper.SmoothStep(value1.Y, value2.Y, amount),
-                MathHelper.SmoothStep(value1.Z, value2.Z, amount));
+            result.X = MathHelper.SmoothStep(value1.X, value2.X, amount);
+            result.Y = MathHelper.SmoothStep(value1.Y, value2.Y, amount);
+            result.Z = MathHelper.SmoothStep(value1.Z, value2.Z, amount);
         }
 
+        /// <summary>
+        /// Performs vector subtraction on <paramref name="value1"/> and <paramref name="value2"/>.
+        /// </summary>
+        /// <param name="value1">The vector to be subtracted from.</param>
+        /// <param name="value2">The vector to be subtracted from <paramref name="value1"/>.</param>
+        /// <returns>The result of the vector subtraction.</returns>
         public static Vector3 Subtract(Vector3 value1, Vector3 value2)
         {
             value1.X -= value2.X;
@@ -518,11 +538,29 @@ namespace Microsoft.Xna.Framework
             return value1;
         }
 
+        /// <summary>
+        /// Performs vector subtraction on <paramref name="value1"/> and <paramref name="value2"/>.
+        /// </summary>
+        /// <param name="value1">The vector to be subtracted from.</param>
+        /// <param name="value2">The vector to be subtracted from <paramref name="value1"/>.</param>
+        /// <param name="result">The result of the vector subtraction.</param>
         public static void Subtract(ref Vector3 value1, ref Vector3 value2, out Vector3 result)
         {
             result.X = value1.X - value2.X;
             result.Y = value1.Y - value2.Y;
             result.Z = value1.Z - value2.Z;
+        }
+
+        internal string DebugDisplayString
+        {
+            get
+            {
+                return string.Concat(
+                    this.X.ToString(), "  ",
+                    this.Y.ToString(), "  ",
+                    this.Z.ToString()
+                );
+            }
         }
 
         public override string ToString()
@@ -546,9 +584,12 @@ namespace Microsoft.Xna.Framework
 
         public static void Transform(ref Vector3 position, ref Matrix matrix, out Vector3 result)
         {
-            result = new Vector3((position.X * matrix.M11) + (position.Y * matrix.M21) + (position.Z * matrix.M31) + matrix.M41,
-                                 (position.X * matrix.M12) + (position.Y * matrix.M22) + (position.Z * matrix.M32) + matrix.M42,
-                                 (position.X * matrix.M13) + (position.Y * matrix.M23) + (position.Z * matrix.M33) + matrix.M43);
+            var x = (position.X * matrix.M11) + (position.Y * matrix.M21) + (position.Z * matrix.M31) + matrix.M41;
+            var y = (position.X * matrix.M12) + (position.Y * matrix.M22) + (position.Z * matrix.M32) + matrix.M42;
+            var z = (position.X * matrix.M13) + (position.Y * matrix.M23) + (position.Z * matrix.M33) + matrix.M43;
+            result.X = x;
+            result.Y = y;
+            result.Z = z;
         }
 
         public static void Transform(Vector3[] sourceArray, ref Matrix matrix, Vector3[] destinationArray)
@@ -568,6 +609,26 @@ namespace Microsoft.Xna.Framework
             }
         }
 
+        public static void Transform(Vector3[] sourceArray, int sourceIndex, ref Matrix matrix, Vector3[] destinationArray, int destinationIndex, int length)
+        {
+            Debug.Assert(sourceArray.Length - sourceIndex >= length, 
+                "The source array is too small for the given sourceIndex and length.");
+            Debug.Assert(destinationArray.Length - destinationIndex >= length,
+                "The destination array is too small for the given destinationIndex and length.");
+
+            // TODO: Are there options on some platforms to implement a vectorized version of this?
+
+            for (var i = 0; i < length; i++)
+            {
+                var position = sourceArray[sourceIndex + i];
+                destinationArray[destinationIndex + i] =
+                    new Vector3(
+                        (position.X * matrix.M11) + (position.Y * matrix.M21) + (position.Z * matrix.M31) + matrix.M41,
+                        (position.X * matrix.M12) + (position.Y * matrix.M22) + (position.Z * matrix.M32) + matrix.M42,
+                        (position.X * matrix.M13) + (position.Y * matrix.M23) + (position.Z * matrix.M33) + matrix.M43);
+            }
+        }
+
 	/// <summary>
         /// Transforms a vector by a quaternion rotation.
         /// </summary>
@@ -581,12 +642,12 @@ namespace Microsoft.Xna.Framework
             return result;
         }
 
-        /// <summary>
-        /// Transforms a vector by a quaternion rotation.
-        /// </summary>
-        /// <param name="vec">The vector to transform.</param>
-        /// <param name="quat">The quaternion to rotate the vector by.</param>
-        /// <param name="result">The result of the operation.</param>
+        ///// <summary>
+        ///// Transforms a vector by a quaternion rotation.
+        ///// </summary>
+        ///// <param name="vec">The vector to transform.</param>
+        ///// <param name="quat">The quaternion to rotate the vector by.</param>
+        ///// <param name="result">The result of the operation.</param>
 //        public static void Transform(ref Vector3 vec, ref Quaternion quat, out Vector3 result)
 //        {
 //		// Taken from the OpentTK implementation of Vector3
@@ -604,8 +665,8 @@ namespace Microsoft.Xna.Framework
         /// <summary>
         /// Transforms a vector by a quaternion rotation.
         /// </summary>
-        /// <param name="vec">The vector to transform.</param>
-        /// <param name="quat">The quaternion to rotate the vector by.</param>
+        /// <param name="value">The vector to transform.</param>
+        /// <param name="rotation">The quaternion to rotate the vector by.</param>
         /// <param name="result">The result of the operation.</param>
         public static void Transform(ref Vector3 value, ref Quaternion rotation, out Vector3 result)
         {
@@ -618,6 +679,69 @@ namespace Microsoft.Xna.Framework
             result.Z = value.Z + z * rotation.W + (rotation.X * y - rotation.Y * x);
         }
 
+        /// <summary>
+        /// Transforms an array of vectors by a quaternion rotation.
+        /// </summary>
+        /// <param name="sourceArray">The vectors to transform</param>
+        /// <param name="rotation">The quaternion to rotate the vector by.</param>
+        /// <param name="destinationArray">The result of the operation.</param>
+        public static void Transform(Vector3[] sourceArray, ref Quaternion rotation, Vector3[] destinationArray)
+        {
+            Debug.Assert(destinationArray.Length >= sourceArray.Length, "The destination array is smaller than the source array.");
+
+            // TODO: Are there options on some platforms to implement a vectorized version of this?
+
+            for (var i = 0; i < sourceArray.Length; i++)
+            {
+                var position = sourceArray[i];
+
+                float x = 2 * (rotation.Y * position.Z - rotation.Z * position.Y);
+                float y = 2 * (rotation.Z * position.X - rotation.X * position.Z);
+                float z = 2 * (rotation.X * position.Y - rotation.Y * position.X);
+
+                destinationArray[i] =
+                    new Vector3(
+                        position.X + x * rotation.W + (rotation.Y * z - rotation.Z * y),
+                        position.Y + y * rotation.W + (rotation.Z * x - rotation.X * z),
+                        position.Z + z * rotation.W + (rotation.X * y - rotation.Y * x));
+            }
+        }
+
+        /// <summary>
+        /// Transforms an array of vectors within a given range by a quaternion rotation.
+        /// </summary>
+        /// <param name="sourceArray">The vectors to transform.</param>
+        /// <param name="sourceIndex">The starting index in the source array.</param>
+        /// <param name="rotation">The quaternion to rotate the vector by.</param>
+        /// <param name="destinationArray">The array to store the result of the operation.</param>
+        /// <param name="destinationIndex">The starting index in the destination array.</param>
+        /// <param name="length">The number of vectors to transform.</param>
+        public static void Transform(Vector3[] sourceArray, int sourceIndex, ref Quaternion rotation, Vector3[] destinationArray, int destinationIndex, int length)
+        {
+            Debug.Assert(sourceArray.Length - sourceIndex >= length,
+                "The source array is too small for the given sourceIndex and length.");
+            Debug.Assert(destinationArray.Length - destinationIndex >= length,
+                "The destination array is too small for the given destinationIndex and length.");
+
+            // TODO: Are there options on some platforms to implement a vectorized version of this?
+
+            for (var i = 0; i < length; i++) 
+            {
+                var position = sourceArray[sourceIndex + i];
+
+                float x = 2 * (rotation.Y * position.Z - rotation.Z * position.Y);
+                float y = 2 * (rotation.Z * position.X - rotation.X * position.Z);
+                float z = 2 * (rotation.X * position.Y - rotation.Y * position.X);
+
+                destinationArray[destinationIndex + i] =
+                    new Vector3(
+                        position.X + x * rotation.W + (rotation.Y * z - rotation.Z * y),
+                        position.Y + y * rotation.W + (rotation.Z * x - rotation.X * z),
+                        position.Z + z * rotation.W + (rotation.X * y - rotation.Y * x));
+            }
+        }
+
+
         public static Vector3 TransformNormal(Vector3 normal, Matrix matrix)
         {
             TransformNormal(ref normal, ref matrix, out normal);
@@ -626,9 +750,27 @@ namespace Microsoft.Xna.Framework
 
         public static void TransformNormal(ref Vector3 normal, ref Matrix matrix, out Vector3 result)
         {
-            result = new Vector3((normal.X * matrix.M11) + (normal.Y * matrix.M21) + (normal.Z * matrix.M31),
-                                 (normal.X * matrix.M12) + (normal.Y * matrix.M22) + (normal.Z * matrix.M32),
-                                 (normal.X * matrix.M13) + (normal.Y * matrix.M23) + (normal.Z * matrix.M33));
+            var x = (normal.X * matrix.M11) + (normal.Y * matrix.M21) + (normal.Z * matrix.M31);
+            var y = (normal.X * matrix.M12) + (normal.Y * matrix.M22) + (normal.Z * matrix.M32);
+            var z = (normal.X * matrix.M13) + (normal.Y * matrix.M23) + (normal.Z * matrix.M33);
+            result.X = x;
+            result.Y = y;
+            result.Z = z;
+        }
+
+        public static void TransformNormal(Vector3[] sourceArray, ref Matrix matrix, Vector3[] destinationArray)
+        {
+            Debug.Assert(destinationArray.Length >= sourceArray.Length, "The destination array is smaller than the source array.");
+
+            for (var i = 0; i < sourceArray.Length; i++)
+            {
+                var normal = sourceArray[i];
+                destinationArray[i] =
+                    new Vector3(
+                        (normal.X*matrix.M11) + (normal.Y*matrix.M21) + (normal.Z*matrix.M31),
+                        (normal.X*matrix.M12) + (normal.Y*matrix.M22) + (normal.Z*matrix.M32),
+                        (normal.X*matrix.M13) + (normal.Y*matrix.M23) + (normal.Z*matrix.M33));
+            }
         }
 
         #endregion Public methods

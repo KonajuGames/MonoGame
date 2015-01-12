@@ -39,9 +39,11 @@ purpose and non-infringement.
 #endregion License
 
 ﻿using System;
+using System.Runtime.Serialization;
 
 namespace Microsoft.Xna.Framework.GamerServices
 {
+    [DataContract]
     public abstract class Gamer
     {
         static SignedInGamerCollection _signedInGamers = new SignedInGamerCollection();
@@ -52,6 +54,8 @@ namespace Microsoft.Xna.Framework.GamerServices
         LeaderboardWriter _leaderboardWriter;
 
         #region Methods
+
+        /*
         public IAsyncResult BeginGetProfile( AsyncCallback callback, Object asyncState )
         {
             throw new NotImplementedException();
@@ -66,6 +70,7 @@ namespace Microsoft.Xna.Framework.GamerServices
         {
             throw new NotImplementedException();
         }
+        */
 
         public override string ToString()
         {
@@ -79,12 +84,14 @@ namespace Microsoft.Xna.Framework.GamerServices
 
         #endregion
         #region Properties
-		public string DisplayName 
+        [DataMember]
+        public string DisplayName 
         {
             get;
 			internal set;
         }
-		
+
+        [DataMember]
         public string Gamertag 
         {
             get
@@ -98,6 +105,7 @@ namespace Microsoft.Xna.Framework.GamerServices
 			}
         }
 
+        [DataMember]
         public bool IsDisposed
         {
             get
@@ -134,6 +142,11 @@ namespace Microsoft.Xna.Framework.GamerServices
             get
             {
                 return _leaderboardWriter;
+            }
+
+            internal set 
+            {
+                _leaderboardWriter = value;
             }
         }
         #endregion

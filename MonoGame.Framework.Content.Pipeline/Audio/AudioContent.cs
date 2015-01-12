@@ -6,17 +6,16 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using NAudio.Wave;
+using System.Linq;
 
 namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
 {
     /// <summary>
     /// Encapsulates and provides operations, such as format conversions, on the source audio. This type is produced by the audio importers and used by audio processors to produce compiled audio assets.
     /// </summary>
-    public class AudioContent : ContentItem, IDisposable
+    public class AudioContent : ContentItem
     {
         internal List<byte> data;
-        WaveStream reader;
         TimeSpan duration;
         string fileName;
         AudioFileType fileType;
@@ -78,15 +77,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
         {
             fileName = audioFileName;
             fileType = audioFileType;
-            Read();
-        }
-
-        /// <summary>
-        /// Releases unmanaged resources and performs other cleanup operations before garbage collection reclaims the object.
-        /// </summary>
-        ~AudioContent()
-        {
-            Dispose(false);
+            Read(audioFileName);
         }
 
         /// <summary>
@@ -124,132 +115,187 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
         }
 
         /// <summary>
-        /// Converts the audio using the specified wave format.
-        /// </summary>
-        /// <param name="waveFormat">The WaveFormat to use for the conversion.</param>
-        void ConvertWav(WaveFormat waveFormat)
-        {
-            reader.Position = 0;
-#if WINDOWS
-            //var mediaTypes = MediaFoundationEncoder.GetOutputMediaTypes(NAudio.MediaFoundation.AudioSubtypes.MFAudioFormat_PCM);
-            using (var resampler = new MediaFoundationResampler(reader, waveFormat))
-            {
-                using (var outStream = new MemoryStream())
-                {
-                    // Since we cannot determine ahead of time the number of bytes to be
-                    // read, read four seconds worth at a time.
-                    byte[] bytes = new byte[reader.WaveFormat.AverageBytesPerSecond * 4];
-                    while (true)
-                    {
-                        int bytesRead = resampler.Read(bytes, 0, bytes.Length);
-                        if (bytesRead == 0)
-                            break;
-                        outStream.Write(bytes, 0, bytesRead);
-                    }
-                    data = new List<byte>(outStream.ToArray());
-                    format = new AudioFormat(waveFormat);
-                }
-            }
-#else
-            throw new NotImplementedException();
-#endif
-        }
-
-        /// <summary>
         /// Transcodes the source audio to the target format and quality.
         /// </summary>
         /// <param name="formatType">Format to convert this audio to.</param>
         /// <param name="quality">Quality of the processed output audio. For streaming formats, it can be one of the following: Low (96 kbps), Medium (128 kbps), Best (192 kbps).  For WAV formats, it can be one of the following: Low (11kHz ADPCM), Medium (22kHz ADPCM), Best (44kHz PCM)</param>
-        /// <param name="targetFileName">Name of the file containing the processed source audio. Must be null for Wav and Adpcm. Must not be null for streaming compressed formats.</param>
-        public void ConvertFormat(ConversionFormat formatType, ConversionQuality quality, string targetFileName)
+        /// <param name="saveToFile">
+        /// The name of the file that the converted audio should be saved into.  This is used for SongContent, where
+        /// the audio is stored external to the XNB file.  If this is null, then the converted audio is stored in
+        /// the Data property.
+        /// </param>
+        public void ConvertFormat(ConversionFormat formatType, ConversionQuality quality, string saveToFile)
         {
             if (disposed)
                 throw new ObjectDisposedException("AudioContent");
 
-            switch (formatType)
+            var temporarySource = Path.GetTempFileName();
+            var temporaryOutput = Path.GetTempFileName();
+            try
             {
-                case ConversionFormat.Adpcm:
-                    ConvertWav(new AdpcmWaveFormat(QualityToSampleRate(quality), format.ChannelCount));
-                    break;
-
-                case ConversionFormat.Pcm:
-                    ConvertWav(new WaveFormat(QualityToSampleRate(quality), format.ChannelCount));
-                    break;
-
-                case ConversionFormat.WindowsMedia:
-#if WINDOWS
-                    reader.Position = 0;
-                    MediaFoundationEncoder.EncodeToWma(reader, targetFileName, QualityToBitRate(quality));
-                    break;
-#else
-                    throw new NotSupportedException("WindowsMedia encoding supported on Windows only");
-#endif
-
-                case ConversionFormat.Xma:
-                    throw new NotSupportedException("XMA is not a supported encoding format. It is specific to the Xbox 360.");
-
-                case ConversionFormat.ImaAdpcm:
-                    ConvertWav(new ImaAdpcmWaveFormat(QualityToSampleRate(quality), format.ChannelCount, 4));
-                    break;
-
-                case ConversionFormat.Aac:
-#if WINDOWS
-                    reader.Position = 0;
-                    MediaFoundationEncoder.EncodeToAac(reader, targetFileName, QualityToBitRate(quality));
-                    break;
-#else
-                    throw new NotImplementedException();
-#endif
-
-                case ConversionFormat.Vorbis:
-                    throw new NotImplementedException("Vorbis is not yet implemented as an encoding format.");
-            }
-        }
-
-        /// <summary>
-        /// Immediately releases the managed and unmanaged resources used by this object.
-        /// </summary>
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        /// <summary>
-        /// Immediately releases the unmanaged resources used by this object.
-        /// </summary>
-        /// <param name="disposing">True if disposing of the managed resources</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposed)
-            {
-                if (disposing)
+                using (var fs = new FileStream(temporarySource, FileMode.Create, FileAccess.Write))
                 {
-                    // Release managed resources
-                    if (reader != null)
-                        reader.Dispose();
-                    reader = null;
+                    var dataBytes = this.data.ToArray();
+                    fs.Write(dataBytes, 0, dataBytes.Length);
                 }
-                disposed = true;
+
+                string ffmpegCodecName, ffmpegMuxerName;
+                int format;
+                switch (formatType)
+                {
+                    case ConversionFormat.Adpcm:
+                        // ADPCM Microsoft 
+                        ffmpegCodecName = "adpcm_ms";
+                        ffmpegMuxerName = "wav";
+                        format = 0x0002; /* WAVE_FORMAT_ADPCM */
+                        break;
+                    case ConversionFormat.Pcm:
+                        // PCM signed 16-bit little-endian
+                        ffmpegCodecName = "pcm_s16le";
+                        ffmpegMuxerName = "s16le";
+                        format = 0x0001; /* WAVE_FORMAT_PCM */
+                        break;
+                    case ConversionFormat.WindowsMedia:
+                        // Windows Media Audio 2
+                        ffmpegCodecName = "wmav2";
+                        ffmpegMuxerName = "asf";
+                        format = 0x0161; /* WAVE_FORMAT_WMAUDIO2 */
+                        break;
+                    case ConversionFormat.Xma:
+                        throw new NotSupportedException(
+                            "XMA is not a supported encoding format. It is specific to the Xbox 360.");
+                    case ConversionFormat.ImaAdpcm:
+                        // ADPCM IMA WAV
+                        ffmpegCodecName = "adpcm_ima_wav";
+                        ffmpegMuxerName = "wav";
+                        format = 0x0011; /* WAVE_FORMAT_IMA_ADPCM */
+                        break;
+                    case ConversionFormat.Aac:
+                        // AAC (Advanced Audio Coding)
+                        ffmpegCodecName = "aac";
+                        ffmpegMuxerName = "aac";
+                        format = 0x0000; /* WAVE_FORMAT_UNKNOWN */
+                        break;
+                    case ConversionFormat.Vorbis:
+                        // Vorbis
+                        ffmpegCodecName = "libvorbis";
+                        ffmpegMuxerName = "ogg";
+                        format = 0x0000; /* WAVE_FORMAT_UNKNOWN */
+                        break;
+                    default:
+                        // Unknown format
+                        throw new NotSupportedException();
+                }
+
+                string ffmpegStdout, ffmpegStderr;
+                var ffmpegExitCode = ExternalTool.Run(
+                    "ffmpeg",
+                    string.Format(
+                        "-y -i \"{0}\" -c:a {1} -b:a {2} -f:a {3} \"{4}\"",
+                        temporarySource,
+                        ffmpegCodecName,
+                        QualityToBitRate(quality),
+                        ffmpegMuxerName,
+                        temporaryOutput),
+                    out ffmpegStdout,
+                    out ffmpegStderr);
+                if (ffmpegExitCode != 0)
+                {
+                    throw new InvalidOperationException("ffmpeg exited with non-zero exit code: \n" + ffmpegStdout + "\n" + ffmpegStderr);
+                }
+
+                byte[] rawData;
+                using (var fs = new FileStream(temporaryOutput, FileMode.Open, FileAccess.Read))
+                {
+                    rawData = new byte[fs.Length];
+                    fs.Read(rawData, 0, rawData.Length);
+                }
+
+                if (saveToFile != null)
+                {
+                    using (var fs = new FileStream(saveToFile, FileMode.Create, FileAccess.Write))
+                    {
+                        fs.Write(rawData, 0, rawData.Length);
+                    }
+
+                    this.data = null;
+                }
+                else
+                {
+                    this.data = rawData.ToList();
+                }
+
+                string ffprobeStdout, ffprobeStderr;
+                var ffprobeExitCode = ExternalTool.Run(
+                    "ffprobe",
+                    string.Format("-i \"{0}\" -show_entries streams -v quiet -of flat", temporarySource),
+                    out ffprobeStdout,
+                    out ffprobeStderr);
+                if (ffprobeExitCode != 0)
+                {
+                    throw new InvalidOperationException("ffprobe exited with non-zero exit code.");
+                }
+
+                // Set default values if information is not available.
+                int averageBytesPerSecond = 0;
+                int bitsPerSample = 0;
+                int blockAlign = 0;
+                int channelCount = 0;
+                int sampleRate = 0;
+                double durationInSeconds = 0;
+
+                var numberFormat = System.Globalization.CultureInfo.InvariantCulture.NumberFormat;
+                foreach (var line in ffprobeStdout.Split(new[] { '\r', '\n', '\0' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var kv = line.Split(new[] { '=' }, 2);
+
+                    switch (kv[0])
+                    {
+                        case "streams.stream.0.sample_rate":
+                            sampleRate = int.Parse(kv[1].Trim('"'), numberFormat);
+                            break;
+                        case "streams.stream.0.bits_per_sample":
+                            bitsPerSample = int.Parse(kv[1].Trim('"'), numberFormat);
+                            break;
+                        case "streams.stream.0.duration":
+                            durationInSeconds = double.Parse(kv[1].Trim('"'), numberFormat);
+                            break;
+                        case "streams.stream.0.channels":
+                            channelCount = int.Parse(kv[1].Trim('"'), numberFormat);
+                            break;
+                    }
+                }
+
+                // This information is not available from ffprobe (and may or may not
+                // be relevant for non-PCM formats anyway):
+                //
+                // * averageBytesPerSecond
+                // * blockAlign
+
+                this.duration = TimeSpan.FromSeconds(durationInSeconds);
+                this.format = new AudioFormat(
+                    averageBytesPerSecond,
+                    bitsPerSample,
+                    blockAlign,
+                    channelCount,
+                    format,
+                    sampleRate);
+            }
+            finally
+            {
+                File.Delete(temporarySource);
+                File.Delete(temporaryOutput);
             }
         }
 
-        /// <summary>
-        /// Read an audio file.
-        /// </summary>
-        void Read()
+        private void Read(string filename)
         {
-#if WINDOWS
-            reader = new MediaFoundationReader(fileName);
-            duration = reader.TotalTime;
-            format = new AudioFormat(reader.WaveFormat);
-
-            var bytes = new byte[reader.Length];
-            var read = reader.Read(bytes, 0, bytes.Length);
-            data = new List<byte>(bytes);
-#else
-            throw new NotImplementedException();
-#endif
+            using (var fs = new FileStream(filename, FileMode.Open))
+            {
+                var data = new byte[fs.Length];
+                fs.Read(data, 0, data.Length);
+                this.data = data.ToList();
+            }
         }
-    }
+	}
 }

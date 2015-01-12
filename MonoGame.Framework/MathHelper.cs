@@ -1,33 +1,8 @@
-#region License
-/*
-MIT License
-Copyright © 2006 The Mono.Xna Team
-
-All rights reserved.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-#endregion License
+// MIT License - Copyright (C) The Mono.Xna Team
+// This file is subject to the terms and conditions defined in
+// file 'LICENSE.txt', which is part of this source code package.
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Microsoft.Xna.Framework
 {
@@ -42,12 +17,12 @@ namespace Microsoft.Xna.Framework
         public const float E = (float)Math.E;
         
         /// <summary>
-        /// Represents the log base ten of e(0.4342945f).
+        /// Represents the log base ten of e(0.4342945).
         /// </summary>
         public const float Log10E = 0.4342945f;
         
         /// <summary>
-        /// Represents the log base two of e(1.442695f).
+        /// Represents the log base two of e(1.442695).
         /// </summary>
         public const float Log2E = 1.442695f;
         
@@ -230,13 +205,9 @@ namespace Microsoft.Xna.Framework
             // It is expected that 0 < amount < 1
             // If amount < 0, return value1
             // If amount > 1, return value2
-#if(USE_FARSEER)
-            float result = SilverSpriteMathHelper.Clamp(amount, 0f, 1f);
-            result = SilverSpriteMathHelper.Hermite(value1, 0f, value2, 0f, result);
-#else
             float result = MathHelper.Clamp(amount, 0f, 1f);
             result = MathHelper.Hermite(value1, 0f, value2, 0f, result);
-#endif
+
             return result;
         }
         
@@ -258,7 +229,7 @@ namespace Microsoft.Xna.Framework
         /// <summary>
         /// Converts degrees to radians.
         /// </summary>
-        /// <param name="radians">The angle in degrees.</param>
+        /// <param name="degrees">The angle in degrees.</param>
         /// <returns>The angle in radians.</returns>
         /// <remarks>
         /// This method uses double precission internally,

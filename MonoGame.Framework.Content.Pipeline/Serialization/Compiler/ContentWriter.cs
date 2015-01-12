@@ -4,6 +4,7 @@
 
 using System;
 using System.IO;
+using LZ4n;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Framework.Content.Pipeline.Builder;
 using System.Collections.Generic;
@@ -18,7 +19,8 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler
     {
         const byte XnbFormatVersion = 5;
         const byte HiDefContent = 0x01;
-        const byte ContentCompressed = 0x80;
+        const byte ContentCompressedLzx = 0x80;
+        const byte ContentCompressedLz4 = 0x40;
 
         ContentCompiler compiler;
         TargetPlatform targetPlatform;
@@ -28,7 +30,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler
         bool compressContent;
         bool disposed;
         List<ContentTypeWriter> typeWriters = new List<ContentTypeWriter>();
-        Dictionary<ContentTypeWriter, int> typeWriterMap = new Dictionary<ContentTypeWriter, int>();
+        Dictionary<Type, int> typeWriterMap = new Dictionary<Type, int>();
         Dictionary<Type, ContentTypeWriter> typeMap = new Dictionary<Type, ContentTypeWriter>();
         List<object> sharedResources = new List<object>();
         Dictionary<object, int> sharedResourceMap = new Dictionary<object, int>();
@@ -39,7 +41,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler
         // This array must remain in sync with TargetPlatform
         static char[] targetPlatformIdentifiers = new[]
         {
-            'w', // Windows
+            'w', // Windows (DirectX)
             'x', // Xbox360
             'm', // WindowsPhone
             'i', // iOS
@@ -52,6 +54,8 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler
             'p', // PlayStationMobile
             'M', // WindowsPhone8
             'r', // RaspberryPi
+            'P', // PlayStation4
+            'g', // Windows (OpenGL)
         };
 
         /// <summary>
@@ -77,15 +81,14 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler
         internal ContentWriter(ContentCompiler compiler, Stream output, TargetPlatform targetPlatform, GraphicsProfile targetProfile, bool compressContent, string rootDirectory, string referenceRelocationPath)
             : base(output)
         {
-            if (compressContent)
-                throw new NotSupportedException("Content compression is not supported at this time.");
-
             this.compiler = compiler;
             this.targetPlatform = targetPlatform;
             this.targetProfile = targetProfile;
             this.compressContent = compressContent;
             this.rootDirectory = rootDirectory;
-            this.referenceRelocationPath = referenceRelocationPath;
+
+            // Normalize the directory format so PathHelper.GetRelativePath will compute external references correctly.
+            this.referenceRelocationPath = PathHelper.NormalizeDirectory(referenceRelocationPath);
 
             outputStream = this.OutStream;
             headerStream = new MemoryStream();
@@ -136,6 +139,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler
                 WriteTypeWriters();
                 bodyStream.Position = 0;
                 bodyStream.CopyTo(contentStream);
+                contentStream.Position = 0;
 
                 // Assemble the separate streams into the output stream
                 this.OutStream = outputStream;
@@ -175,7 +179,8 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler
             Write('B');
             Write(targetPlatformIdentifiers[(int)targetPlatform]);
             Write(XnbFormatVersion);
-            byte flags = (byte)((targetProfile == GraphicsProfile.HiDef ? HiDefContent : (byte)0) | (compressContent ? ContentCompressed : (byte)0));
+            // We cannot use LZX compression, so we use the public domain LZ4 compression. Use one of the spare bits in the flags byte to specify LZ4.
+            byte flags = (byte)((targetProfile == GraphicsProfile.HiDef ? HiDefContent : (byte)0) | (compressContent ? ContentCompressedLz4 : (byte)0));
             Write(flags);
         }
 
@@ -184,35 +189,29 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler
         /// </summary>
         void WriteSharedResources()
         {
-            foreach (var resource in sharedResources)
+            for (int i = 0; i < sharedResources.Count; i++)
+            {
+                var resource = sharedResources[i];
                 WriteObject<object>(resource);
-        }
-
-        /// <summary>
-        /// Compresses the input stream and returns a stream containing the compressed data.
-        /// </summary>
-        /// <param name="stream">The stream to compress.</param>
-        /// <returns>A stream containing the compressed data.</returns>
-        Stream CompressStream(Stream stream)
-        {
-            throw new NotImplementedException();
+            }
         }
 
         /// <summary>
         /// Compress the stream and write it to the output.
         /// </summary>
         /// <param name="stream">The stream to compress and write to the output.</param>
-        void WriteCompressedStream(Stream stream)
+        void WriteCompressedStream(MemoryStream stream)
         {
             // Compress stream
-            using (var compressedStream = CompressStream(stream))
-            {
-                UInt32 totalSize = (UInt32)(headerStream.Length + compressedStream.Length + sizeof(UInt32) + sizeof(UInt32));
-                Write(totalSize);
-                Write((UInt32)stream.Length);
-                compressedStream.Position = 0;
-                compressedStream.CopyTo(outputStream);
-            }
+            var maxLength = LZ4Codec.MaximumOutputLength((int)stream.Length);
+            var outputArray = new byte[maxLength];
+            int resultLength = LZ4Codec.Encode32HC(stream.GetBuffer(), 0, (int)stream.Length, outputArray, 0, maxLength);
+
+            UInt32 totalSize = (UInt32)(headerStream.Length + resultLength + sizeof(UInt32) + sizeof(UInt32));
+            Write(totalSize);
+            Write((int)stream.Length);
+
+            outputStream.Write(outputArray, 0, resultLength);
         }
 
         /// <summary>
@@ -223,7 +222,6 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler
         {
             UInt32 totalSize = (UInt32)(headerStream.Length + stream.Length + sizeof(UInt32));
             Write(totalSize);
-            stream.Position = 0;
             stream.CopyTo(outputStream);
         }
 
@@ -239,13 +237,24 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler
             {
                 int index = typeWriters.Count;
                 typeWriter = compiler.GetTypeWriter(type);
+
                 typeWriters.Add(typeWriter);
-                typeWriterMap.Add(typeWriter, index);
+			    typeWriterMap.Add(typeWriter.GetType(), index);
                 typeMap.Add(type, typeWriter);
 
-                var args = type.GetGenericArguments();
-                foreach (var arg in args)
-                    GetTypeWriter(arg);
+                // TODO: This is kinda messy.. seems like there could
+                // be a better way for generics and arrays to register
+                // their inner types with the typeWriterMap.
+                if (type.IsGenericType)
+                {
+                    var args = type.GetGenericArguments();
+                    foreach (var arg in args)
+                        GetTypeWriter(arg);
+                }
+                else if (type.IsArray)
+                {
+                    GetTypeWriter(type.GetElementType());
+                }
             }
             return typeWriter;
         }
@@ -296,7 +305,16 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler
             if (value == null)
                 Write7BitEncodedInt(0);
             else
-                WriteObject<T>(value, GetTypeWriter(value.GetType()));
+            {
+                var typeWriter = GetTypeWriter(value.GetType());
+
+                // Because zero means null object, we add one to 
+                // the index before writing it to the file.
+                var index = typeWriterMap[typeWriter.GetType()];
+                Write7BitEncodedInt(index + 1);
+
+                typeWriter.Write(this, value);                
+            }
         }
 
         /// <summary>
@@ -307,33 +325,17 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler
         /// <param name="typeWriter">The content type writer.</param>
         /// <remarks>The type hint should be retrieved from the Initialize method of the ContentTypeWriter
         /// that is calling WriteObject, by calling GetTypeWriter and passing it the type of the field used
-        /// to hold the value being serialized. If the hint type is a sealed value type (which cannot be
-        /// null or hold a polymorphic object instance) this method skips writing the usual type identifier.</remarks>
+        /// to hold the value being serialized.
+        /// </remarks>
         public void WriteObject<T>(T value, ContentTypeWriter typeWriter)
         {
             if (typeWriter == null)
                 throw new ArgumentNullException("typeWriter");
 
-            if (value == null)
-            {
-                // Zero means a null object
-                Write7BitEncodedInt(0);
-            }
+            if (typeWriter.TargetType.IsValueType)
+                typeWriter.Write(this, value);
             else
-            {
-                if (value.GetType().IsValueType)
-                {
-                    // Value types do not have the type identifier written to the file
-                    typeWriter.Write(this, value);
-                }
-                else
-                {
-                    int index = typeWriterMap[typeWriter];
-                    // Because zero means null object, we add one to the index before writing it to the file
-                    Write7BitEncodedInt(index + 1);
-                    typeWriter.Write(this, value);
-                }
-            }
+                WriteObject(value);
         }
 
         /// <summary>
@@ -476,10 +478,37 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler
             Write(value.W);
         }
 
+        /// <summary>
+        /// Writes a BoundingSphere value.
+        /// </summary>
+        /// <param name="value">Value to write.</param>
         internal void Write(BoundingSphere value)
         {
             Write(value.Center);
             Write(value.Radius);
+        }
+
+        /// <summary>
+        /// Writes a Rectangle value.
+        /// </summary>
+        /// <param name="value">Value to write.</param>
+        internal void Write(Rectangle value)
+        {
+            Write(value.X);
+            Write(value.Y);
+            Write(value.Width);
+            Write(value.Height);
+        }
+
+        /// <summary>
+        /// Helper for checking if a type can be deserialized into an existing object.
+        /// </summary>
+        /// <param name="type">The type to check.</param>
+        /// <returns>True if the type can be deserialized into an existing object.</returns>
+        internal bool CanDeserializeIntoExistingObject(Type type)
+        {
+            var typeWriter = compiler.GetTypeWriter(type);
+            return typeWriter != null && typeWriter.CanDeserializeIntoExistingObject;
         }
     }
 }

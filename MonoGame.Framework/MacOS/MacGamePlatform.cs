@@ -77,7 +77,7 @@ using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Input.Touch;
-using Microsoft.Xna.Framework.GamerServices;
+//using Microsoft.Xna.Framework.GamerServices;
 
 namespace Microsoft.Xna.Framework
 {
@@ -261,7 +261,7 @@ namespace Microsoft.Xna.Framework
             if (_needsToResetElapsedTime)
                 _needsToResetElapsedTime = false;
 
-            if (AreUpdatingAndDrawingSuspended || IsPlayingVideo || Guide.isVisible)
+            if (AreUpdatingAndDrawingSuspended || IsPlayingVideo) // || Guide.isVisible) (SJ) this seems very odd
                 return false;
 
             return true;
@@ -269,7 +269,7 @@ namespace Microsoft.Xna.Framework
 
         public override bool BeforeDraw(GameTime gameTime)
         {
-            if (AreUpdatingAndDrawingSuspended || IsPlayingVideo || Guide.isVisible)
+            if (AreUpdatingAndDrawingSuspended || IsPlayingVideo) // || Guide.isVisible) (SJ) this seems very odd
                 return false;
             return true;
         }
@@ -306,10 +306,10 @@ namespace Microsoft.Xna.Framework
                 //        Hopefully this does not cause excessive havoc.
                 //_mainWindow.MakeKeyAndOrderFront(Window);
                 ResetWindowBounds();
-                _mainWindow.HidesOnDeactivate = true;   
-                Mouse.State.LeftButton = ButtonState.Released;
-                Mouse.State.RightButton = ButtonState.Released;
-                Mouse.State.MiddleButton = ButtonState.Released;
+                _mainWindow.HidesOnDeactivate = true;
+                _gameWindow.MouseState.LeftButton = ButtonState.Released;
+                _gameWindow.MouseState.RightButton = ButtonState.Released;
+                _gameWindow.MouseState.MiddleButton = ButtonState.Released;
             }
             finally { ResumeUpdatingAndDrawing(); }
         }
@@ -350,9 +350,9 @@ namespace Microsoft.Xna.Framework
                 //_mainWindow.MakeKeyAndOrderFront(Window);
                 ResetWindowBounds();
                 _mainWindow.HidesOnDeactivate = false;
-                Mouse.State.LeftButton = ButtonState.Released;
-                Mouse.State.RightButton = ButtonState.Released;
-                Mouse.State.MiddleButton = ButtonState.Released;
+                _gameWindow.MouseState.LeftButton = ButtonState.Released;
+                _gameWindow.MouseState.RightButton = ButtonState.Released;
+                _gameWindow.MouseState.MiddleButton = ButtonState.Released;
             }
             finally { ResumeUpdatingAndDrawing(); }
         }

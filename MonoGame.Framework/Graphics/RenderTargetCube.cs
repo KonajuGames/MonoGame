@@ -132,7 +132,7 @@ namespace Microsoft.Xna.Framework.Graphics
                     }
                 };
 
-                _renderTargetViews[i] = new RenderTargetView(graphicsDevice._d3dDevice, _texture, renderTargetViewDescription);
+                _renderTargetViews[i] = new RenderTargetView(graphicsDevice._d3dDevice, GetTexture(), renderTargetViewDescription);
             }
 
             // If we don't need a depth buffer then we're done.
@@ -171,48 +171,35 @@ namespace Microsoft.Xna.Framework.Graphics
 #endif            
         }
 
-        /// <summary>
-        /// Releases the unmanaged resources used by an instance of the <see cref="RenderTargetCube"/> class 
-        /// and optionally releases the managed resources.
-        /// </summary>
-        /// <param name="disposing">
-        /// <see langword="true"/> to release both managed and unmanaged resources; 
-        /// <see langword="false"/> to release only unmanaged resources.
-        /// </param>
         protected override void Dispose(bool disposing)
         {
-            if (!IsDisposed)
+            if (disposing)
             {
 #if DIRECTX
-                if (disposing)
+                if (_renderTargetViews != null)
                 {
-                    if (_renderTargetViews != null)
-                    {
-                        for (int i = 0; i < _renderTargetViews.Length; i++)
-                            _renderTargetViews[i].Dispose();
-                        _renderTargetViews = null;
-                    }
+                    for (var i = 0; i < _renderTargetViews.Length; i++)
+                        _renderTargetViews[i].Dispose();
 
-                    if (_depthStencilView != null)
-                    {
-                        _depthStencilView.Dispose();
-                        _depthStencilView = null;
-                    }
+                    _renderTargetViews = null;
+                    SharpDX.Utilities.Dispose(ref _depthStencilView);
                 }
 #endif
-
-                base.Dispose(disposing);
             }
+
+            base.Dispose(disposing);
         }
 
 #if DIRECTX
         /// <inheritdoc/>
+        [CLSCompliant(false)]
         public RenderTargetView GetRenderTargetView(int arraySlice)
         {
             return _renderTargetViews[arraySlice];
         }
 
         /// <inheritdoc/>
+        [CLSCompliant(false)]
         public DepthStencilView GetDepthStencilView()
         {
             return _depthStencilView;

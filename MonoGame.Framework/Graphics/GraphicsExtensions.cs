@@ -1,14 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Diagnostics;
 
 #if OPENGL
 #if MONOMAC
 using MonoMac.OpenGL;
 #elif WINDOWS || LINUX
+using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL;
 #elif GLES
+#if ANGLE
+using OpenTK.Graphics;
+#endif
 using OpenTK.Graphics.ES20;
 using BlendEquationMode = OpenTK.Graphics.ES20.All;
 using BlendingFactorSrc = OpenTK.Graphics.ES20.All;
@@ -22,13 +24,12 @@ using ColorPointerType = OpenTK.Graphics.ES20.All;
 using NormalPointerType = OpenTK.Graphics.ES20.All;
 using TexCoordPointerType = OpenTK.Graphics.ES20.All;
 using GetPName = OpenTK.Graphics.ES20.All;
-using System.Diagnostics;
 #endif
 #endif
 
 namespace Microsoft.Xna.Framework.Graphics
 {
-    public static class GraphicsExtensions
+    static class GraphicsExtensions
     {
 #if OPENGL
         public static All OpenGL11(CullMode cull)
@@ -40,7 +41,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 case CullMode.CullCounterClockwiseFace:
                     return All.Ccw;
                 default:
-                    throw new NotImplementedException();
+                    throw new ArgumentException();
             }
         }
 
@@ -85,7 +86,7 @@ namespace Microsoft.Xna.Framework.Graphics
                     return 4;
             }
 
-            throw new NotImplementedException();
+            throw new ArgumentException();
         }
 
         public static VertexPointerType OpenGLVertexPointerType(this VertexElementFormat elementFormat)
@@ -129,7 +130,7 @@ namespace Microsoft.Xna.Framework.Graphics
                     return VertexPointerType.Float;
             }
 
-            throw new NotImplementedException();
+            throw new ArgumentException();
         }
 
 		public static VertexAttribPointerType OpenGLVertexAttribPointerType(this VertexElementFormat elementFormat)
@@ -175,7 +176,7 @@ namespace Microsoft.Xna.Framework.Graphics
 #endif
             }
 
-            throw new NotImplementedException();
+            throw new ArgumentException();
         }
 
         public static bool OpenGLVertexAttribNormalized(this VertexElement element)
@@ -245,7 +246,7 @@ namespace Microsoft.Xna.Framework.Graphics
 #endif
 			}
 
-            throw new NotImplementedException();
+            throw new ArgumentException();
         }
 
        public static NormalPointerType OpenGLNormalPointerType(this VertexElementFormat elementFormat)
@@ -291,7 +292,7 @@ namespace Microsoft.Xna.Framework.Graphics
 #endif
 			}
 
-            throw new NotImplementedException();
+            throw new ArgumentException();
         }
 
        public static TexCoordPointerType OpenGLTexCoordPointerType(this VertexElementFormat elementFormat)
@@ -337,7 +338,7 @@ namespace Microsoft.Xna.Framework.Graphics
 #endif
 			}
 
-            throw new NotImplementedException();
+            throw new ArgumentException();
         }
 
 		
@@ -351,7 +352,7 @@ namespace Microsoft.Xna.Framework.Graphics
 				return BlendEquationMode.MaxExt;
 			case BlendFunction.Min:
 				return BlendEquationMode.MinExt;
-#elif MONOMAC
+#elif MONOMAC || WINDOWS || LINUX
 			case BlendFunction.Max:
 				return BlendEquationMode.Max;
 			case BlendFunction.Min:
@@ -363,7 +364,7 @@ namespace Microsoft.Xna.Framework.Graphics
 				return BlendEquationMode.FuncSubtract;
 
 			default:
-                throw new NotImplementedException();
+                throw new ArgumentException();
 			}
 		}
 
@@ -444,6 +445,69 @@ namespace Microsoft.Xna.Framework.Graphics
 			}
 
 		}
+
+#if WINDOWS || LINUX || ANGLE
+        /// <summary>
+        /// Convert a <see cref="SurfaceFormat"/> to an OpenTK.Graphics.ColorFormat.
+        /// This is used for setting up the backbuffer format of the OpenGL context.
+        /// </summary>
+        /// <returns>An OpenTK.Graphics.ColorFormat instance.</returns>
+        /// <param name="format">The <see cref="SurfaceFormat"/> to convert.</param>
+        internal static ColorFormat GetColorFormat(this SurfaceFormat format)
+        {
+            switch (format)
+            {
+                case SurfaceFormat.Alpha8:
+                    return new ColorFormat(0, 0, 0, 8);
+                case SurfaceFormat.Bgr565:
+                    return new ColorFormat(5, 6, 5, 0);
+                case SurfaceFormat.Bgra4444:
+                    return new ColorFormat(4, 4, 4, 4);
+                case SurfaceFormat.Bgra5551:
+                    return new ColorFormat(5, 5, 5, 1);
+                case SurfaceFormat.Bgr32:
+                    return new ColorFormat(8, 8, 8, 0);
+                case SurfaceFormat.Bgra32:
+                case SurfaceFormat.Color:
+                    return new ColorFormat(8, 8, 8, 8);
+                case SurfaceFormat.Rgba1010102:
+                    return new ColorFormat(10, 10, 10, 2);
+                default:
+                    // Floating point backbuffers formats could be implemented
+                    // but they are not typically used on the backbuffer. In
+                    // those cases it is better to create a render target instead.
+                    throw new NotSupportedException();
+            }
+        }
+
+        /// <summary>
+        /// Converts <see cref="PresentInterval"/> to OpenGL swap interval.
+        /// </summary>
+        /// <returns>A value according to EXT_swap_control</returns>
+        /// <param name="interval">The <see cref="PresentInterval"/> to convert.</param>
+        internal static int GetSwapInterval(this PresentInterval interval)
+        {
+            // See http://www.opengl.org/registry/specs/EXT/swap_control.txt
+            // and https://www.opengl.org/registry/specs/EXT/glx_swap_control_tear.txt
+            // OpenTK checks for EXT_swap_control_tear:
+            // if supported, a swap interval of -1 enables adaptive vsync;
+            // otherwise -1 is converted to 1 (vsync enabled.)
+
+            switch (interval)
+            {
+
+                case PresentInterval.Immediate:
+                    return 0;
+                case PresentInterval.One:
+                    return 1;
+                case PresentInterval.Two:
+                    return 2;
+                case PresentInterval.Default:
+                default:
+                    return -1;
+            }
+        }
+#endif
 		
 		
 		internal static void GetGLFormat (this SurfaceFormat format,
@@ -485,12 +549,16 @@ namespace Microsoft.Xna.Framework.Graphics
 				glFormat = PixelFormat.Luminance;
 				glType = PixelType.UnsignedByte;
 				break;
-#if !IOS && !ANDROID
+#if !IOS && !ANDROID && !ANGLE
 			case SurfaceFormat.Dxt1:
-				glInternalFormat = PixelInternalFormat.CompressedRgbaS3tcDxt1Ext;
+				glInternalFormat = PixelInternalFormat.CompressedRgbS3tcDxt1Ext;
 				glFormat = (PixelFormat)All.CompressedTextureFormats;
 				break;
-			case SurfaceFormat.Dxt3:
+            case SurfaceFormat.Dxt1a:
+                glInternalFormat = PixelInternalFormat.CompressedRgbaS3tcDxt1Ext;
+                glFormat = (PixelFormat)All.CompressedTextureFormats;
+                break;
+            case SurfaceFormat.Dxt3:
 				glInternalFormat = PixelInternalFormat.CompressedRgbaS3tcDxt3Ext;
 				glFormat = (PixelFormat)All.CompressedTextureFormats;
 				break;
@@ -504,9 +572,98 @@ namespace Microsoft.Xna.Framework.Graphics
 				glFormat = PixelFormat.Red;
 				glType = PixelType.Float;
 				break;
+
+            case SurfaceFormat.HalfVector2:
+                glInternalFormat = PixelInternalFormat.Rg16f;
+				glFormat = PixelFormat.Rg;
+				glType = PixelType.HalfFloat;
+                break;
+
+            // HdrBlendable implemented as HalfVector4 (see http://blogs.msdn.com/b/shawnhar/archive/2010/07/09/surfaceformat-hdrblendable.aspx)
+            case SurfaceFormat.HdrBlendable:
+            case SurfaceFormat.HalfVector4:
+                glInternalFormat = PixelInternalFormat.Rgba16f;
+                glFormat = PixelFormat.Rgba;
+                glType = PixelType.HalfFloat;
+                break;
+
+            case SurfaceFormat.HalfSingle:
+                glInternalFormat = PixelInternalFormat.R16f;
+                glFormat = PixelFormat.Red;
+                glType = PixelType.HalfFloat;
+                break;
+
+            case SurfaceFormat.Vector2:
+                glInternalFormat = PixelInternalFormat.Rg32f;
+                glFormat = PixelFormat.Rg;
+                glType = PixelType.Float;
+                break;
+
+            case SurfaceFormat.Vector4:
+                glInternalFormat = PixelInternalFormat.Rgba32f;
+                glFormat = PixelFormat.Rgba;
+                glType = PixelType.Float;
+                break;
+
+            case SurfaceFormat.NormalizedByte2:
+                glInternalFormat = PixelInternalFormat.Rg8i;
+                glFormat = PixelFormat.Rg;
+                glType = PixelType.Byte;
+                break;
+
+            case SurfaceFormat.NormalizedByte4:
+                glInternalFormat = PixelInternalFormat.Rgba8i;
+                glFormat = PixelFormat.Rgba;
+                glType = PixelType.Byte;
+                break;
+
+            case SurfaceFormat.Rg32:
+                glInternalFormat = PixelInternalFormat.Rg16ui;
+                glFormat = PixelFormat.Rg;
+                glType = PixelType.UnsignedShort;
+                break;
+
+            case SurfaceFormat.Rgba64:
+                glInternalFormat = PixelInternalFormat.Rgba16ui;
+                glFormat = PixelFormat.Rgba;
+                glType = PixelType.UnsignedShort;
+                break;
+
+            case SurfaceFormat.Rgba1010102:
+                glInternalFormat = PixelInternalFormat.Rgb10A2ui;
+                glFormat = PixelFormat.Rgba;
+                glType = PixelType.UnsignedInt1010102;
+                break;
 #endif
 				
+#if ANDROID
+			case SurfaceFormat.Dxt1:
+                // 0x83F0 is the RGB version, 0x83F1 is the RGBA version (1-bit alpha)
+                // XNA uses the RGB version.
+                glInternalFormat = (PixelInternalFormat)0x83F0; 
+				glFormat = (PixelFormat)All.CompressedTextureFormats;
+				break;
+            case SurfaceFormat.Dxt1a:
+                // 0x83F0 is the RGB version, 0x83F1 is the RGBA version (1-bit alpha)
+                glInternalFormat = (PixelInternalFormat)0x83F1;
+                glFormat = (PixelFormat)All.CompressedTextureFormats;
+                break;
+            case SurfaceFormat.Dxt3:
+                glInternalFormat = (PixelInternalFormat)0x83F2;
+				glFormat = (PixelFormat)All.CompressedTextureFormats;
+				break;
+			case SurfaceFormat.Dxt5:
+                glInternalFormat = (PixelInternalFormat)0x83F3;
+				glFormat = (PixelFormat)All.CompressedTextureFormats;
+				break;
+#endif
+                    
+
 #if IOS || ANDROID
+            case SurfaceFormat.RgbEtc1:
+                glInternalFormat = (PixelInternalFormat)0x8D64; // GL_ETC1_RGB8_OES
+                glFormat = (PixelFormat)All.CompressedTextureFormats;
+                break;
 			case SurfaceFormat.RgbPvrtc2Bpp:
 				glInternalFormat = PixelInternalFormat.CompressedRgbPvrtc2Bppv1Img;
 				glFormat = (PixelFormat)All.CompressedTextureFormats;
@@ -531,30 +688,67 @@ namespace Microsoft.Xna.Framework.Graphics
 
 #endif // OPENGL
 
-        public static int Size(this SurfaceFormat surfaceFormat)
+        public static int GetFrameLatency(this PresentInterval interval)
+        {
+            switch (interval)
+            {
+                case PresentInterval.Immediate:
+                    return 0;
+
+                case PresentInterval.Two:
+                    return 2;
+
+                default:
+                    return 1;
+            }
+        }
+
+        public static int GetSize(this SurfaceFormat surfaceFormat)
         {
             switch (surfaceFormat)
             {
-                case SurfaceFormat.Color:
-                    return 4;
+                case SurfaceFormat.Dxt1:
+                case SurfaceFormat.Dxt1a:
+                case SurfaceFormat.RgbPvrtc2Bpp:
+                case SurfaceFormat.RgbaPvrtc2Bpp:
+                case SurfaceFormat.RgbEtc1:
+                    // One texel in DXT1, PVRTC 2bpp and ETC1 is a minimum 4x4 block, which is 8 bytes
+                    return 8;
                 case SurfaceFormat.Dxt3:
-                    return 4;
-                case SurfaceFormat.Bgr565:
-                    return 2;
-                case SurfaceFormat.Bgra4444:
-                    return 2;
-                case SurfaceFormat.Bgra5551:
-                    return 2;
+                case SurfaceFormat.Dxt5:
+                case SurfaceFormat.RgbPvrtc4Bpp:
+                case SurfaceFormat.RgbaPvrtc4Bpp:
+                    // One texel in DXT3, DXT5 and PVRTC 4bpp is a minimum 4x4 block, which is 16 bytes
+                    return 16;
                 case SurfaceFormat.Alpha8:
                     return 1;
-				case SurfaceFormat.NormalizedByte4:
+                case SurfaceFormat.Bgr565:
+                case SurfaceFormat.Bgra4444:
+                case SurfaceFormat.Bgra5551:
+                case SurfaceFormat.HalfSingle:
+                case SurfaceFormat.NormalizedByte2:
+                    return 2;
+                case SurfaceFormat.Color:
+                case SurfaceFormat.Single:
+                case SurfaceFormat.Rg32:
+                case SurfaceFormat.HalfVector2:
+                case SurfaceFormat.NormalizedByte4:
+                case SurfaceFormat.Rgba1010102:
+                case SurfaceFormat.Bgra32:
+                case SurfaceFormat.Bgr32:
                     return 4;
+                case SurfaceFormat.HalfVector4:
+                case SurfaceFormat.Rgba64:
+                case SurfaceFormat.Vector2:
+                    return 8;
+                case SurfaceFormat.Vector4:
+                    return 16;
                 default:
-                    throw new NotImplementedException();
+                    throw new ArgumentException();
             }
         }
-		
-        public static int GetTypeSize(this VertexElementFormat elementFormat)
+
+        public static int GetSize(this VertexElementFormat elementFormat)
         {
             switch (elementFormat)
             {
@@ -568,7 +762,7 @@ namespace Microsoft.Xna.Framework.Graphics
                     return 12;
 
                 case VertexElementFormat.Vector4:
-                    return 0x10;
+                    return 16;
 
                 case VertexElementFormat.Color:
                     return 4;
@@ -602,7 +796,7 @@ namespace Microsoft.Xna.Framework.Graphics
         public static int GetBoundTexture2D()
         {
             var prevTexture = 0;
-#if GLES
+#if GLES && !ANGLE && !ANDROID
             GL.GetInteger(GetPName.TextureBinding2D, ref prevTexture);
 #else
             GL.GetInteger(GetPName.TextureBinding2D, out prevTexture);
@@ -611,10 +805,11 @@ namespace Microsoft.Xna.Framework.Graphics
             return prevTexture;
         }
 
-        [System.Diagnostics.Conditional("DEBUG")]
+        [Conditional("DEBUG")]
+		[DebuggerHidden]
         public static void CheckGLError()
         {
-#if GLES
+#if GLES && !ANGLE
             All error = GL.GetError();
             if (error != All.False)
                 throw new MonoGameGLException("GL.GetError() returned " + error.ToString());
@@ -628,7 +823,7 @@ namespace Microsoft.Xna.Framework.Graphics
 #endif
 
 #if OPENGL
-        [System.Diagnostics.Conditional("DEBUG")]
+        [Conditional("DEBUG")]
         public static void LogGLError(string location)
         {
             try
@@ -640,13 +835,15 @@ namespace Microsoft.Xna.Framework.Graphics
 #if ANDROID
                 // Todo: Add generic MonoGame logging interface
                 Android.Util.Log.Debug("MonoGame", "MonoGameGLException at " + location + " - " + ex.Message);
+#else
+                Debug.WriteLine("MonoGameGLException at " + location + " - " + ex.Message);
 #endif
             }
         }
 #endif
     }
 
-    public class MonoGameGLException : Exception
+    internal class MonoGameGLException : Exception
     {
         public MonoGameGLException(string message)
             : base(message)

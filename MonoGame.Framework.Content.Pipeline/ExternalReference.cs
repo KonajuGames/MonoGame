@@ -2,6 +2,7 @@
 // This file is subject to the terms and conditions defined in
 // file 'LICENSE.txt', which is part of this source code package.
 
+using MonoGame.Framework.Content.Pipeline.Builder;
 using System;
 using System.IO;
 
@@ -13,7 +14,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline
     /// While the object model is instantiated, reference file names are absolute. When the file containing the external reference is serialized to disk, file names are relative to the file. This allows movement of the content tree to a different location without breaking internal links.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class ExternalReference<T> : ContentItem
+    public sealed class ExternalReference<T> : ContentItem
     {
         /// <summary>
         /// Gets and sets the file name of an ExternalReference.
@@ -52,7 +53,14 @@ namespace Microsoft.Xna.Framework.Content.Pipeline
                 throw new ArgumentNullException("relativeToContent");
             if (string.IsNullOrEmpty(relativeToContent.SourceFilename))
                 throw new ArgumentNullException("relativeToContent.SourceFilename");
-            Filename = Path.Combine(relativeToContent.SourceFilename, filename);
+
+            // The intermediate serializer from XNA has the external reference
+            // path walking up to the content project directory and then back
+            // down to the asset path. We don't appear to have any way to do
+            // that from here, so we'll work with the absolute path and let the
+            // higher level process sort out any relative paths they need.
+            var basePath = Path.GetDirectoryName(relativeToContent.SourceFilename);
+            Filename = PathHelper.NormalizeOS(Path.GetFullPath(Path.Combine(basePath, filename)));
         }
     }
 }

@@ -67,24 +67,35 @@ non-infringement.
 #endregion License
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using Microsoft.Xna.Framework;
 using System.Windows.Forms;
+using Microsoft.Xna.Framework.Input;
+using XnaKeys = Microsoft.Xna.Framework.Input.Keys;
 
 
 namespace MonoGame.Framework
 {
     class WinFormsGamePlatform : GamePlatform
     {
-        internal static string LaunchParameters;
+        //internal static string LaunchParameters;
 
         private WinFormsGameWindow _window;
+        private readonly List<XnaKeys> _keyState;
 
         public WinFormsGamePlatform(Game game)
             : base(game)
         {
+            _keyState = new List<XnaKeys>();
+            Keyboard.SetKeys(_keyState);
+
             _window = new WinFormsGameWindow(this);
+            _window.KeyState = _keyState;
+
+            Mouse.SetWindows(_window._form);
+
             Window = _window;
         }
 
@@ -98,9 +109,15 @@ namespace MonoGame.Framework
             _window.MouseVisibleToggled();
         }
 
+        public override bool BeforeRun()
+        {
+            _window.UpdateWindows();
+            return base.BeforeRun();
+        }
+
         public override void BeforeInitialize()
         {
-            _window.Initialize();
+            _window.Initialize(Game.graphicsDeviceManager.PreferredBackBufferWidth, Game.graphicsDeviceManager.PreferredBackBufferHeight);
 
             base.BeforeInitialize();
         }
@@ -112,8 +129,7 @@ namespace MonoGame.Framework
 
         public override void StartRunLoop()
         {
-            // We don't support syncronous run loops right now!
-            throw new NotSupportedException();
+            throw new NotSupportedException("The Windows platform does not support asynchronous run loops");
         }
         
         public override void Exit()
@@ -139,7 +155,7 @@ namespace MonoGame.Framework
         {
         }
 
-        public void ResetWindowBounds(bool toggleFullScreen)
+        public void ResetWindowBounds()
         {
             _window.ChangeClientSize(new Size(Game.graphicsDeviceManager.PreferredBackBufferWidth, Game.graphicsDeviceManager.PreferredBackBufferHeight));
         }
@@ -173,6 +189,8 @@ namespace MonoGame.Framework
                     _window.Dispose();
                     _window = null;
                     Window = null;
+
+                    Microsoft.Xna.Framework.Media.MediaManagerState.CheckShutdown();
                 }
             }
 

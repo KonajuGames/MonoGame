@@ -43,7 +43,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
-
+using Lz4;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Path = System.IO.Path;
@@ -58,15 +58,37 @@ namespace Microsoft.Xna.Framework.Content
 {
 	public partial class ContentManager : IDisposable
 	{
+        const byte ContentCompressedLzx = 0x80;
+        const byte ContentCompressedLz4 = 0x40;
+
 		private string _rootDirectory = string.Empty;
 		private IServiceProvider serviceProvider;
 		private IGraphicsDeviceService graphicsDeviceService;
-        private Dictionary<string, object> loadedAssets = new Dictionary<string, object>();
+        private Dictionary<string, object> loadedAssets = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 		private List<IDisposable> disposableAssets = new List<IDisposable>();
         private bool disposed;
 		
 		private static object ContentManagerLock = new object();
         private static List<WeakReference> ContentManagers = new List<WeakReference>();
+
+	static List<char> targetPlatformIdentifiers = new List<char>()
+        {
+            'w', // Windows (DirectX)
+            'x', // Xbox360
+            'm', // WindowsPhone
+            'i', // iOS
+            'a', // Android
+            'l', // Linux
+            'X', // MacOSX
+            'W', // WindowsStoreApp
+            'n', // NativeClient
+            'u', // Ouya
+            'p', // PlayStationMobile
+            'M', // WindowsPhone8
+            'r', // RaspberryPi
+            'P', // PlayStation4
+            'g', // Windows (OpenGL)
+        };
 
         private static void AddContentManager(ContentManager contentManager)
         {
@@ -180,7 +202,10 @@ namespace Microsoft.Xna.Framework.Content
 		{
 			if (!disposed)
 			{
-				Unload();
+                if (disposing)
+                {
+                    Unload();
+                }
 				disposed = true;
 			}
 		}
@@ -197,10 +222,18 @@ namespace Microsoft.Xna.Framework.Content
             }
 
             T result = default(T);
+            
+            // On some platforms, name and slash direction matter.
+            // We store the asset by a /-seperating key rather than how the
+            // path to the file was passed to us to avoid
+            // loading "content/asset1.xnb" and "content\\ASSET1.xnb" as if they were two 
+            // different files. This matches stock XNA behavior.
+            // The dictionary will ignore case differences
+            var key = assetName.Replace('\\', '/');
 
             // Check for a previously loaded asset first
             object asset = null;
-            if (loadedAssets.TryGetValue(assetName, out asset))
+            if (loadedAssets.TryGetValue(key, out asset))
             {
                 if (asset is T)
                 {
@@ -211,7 +244,7 @@ namespace Microsoft.Xna.Framework.Content
             // Load the asset.
             result = ReadAsset<T>(assetName, null);
 
-            loadedAssets[assetName] = result;
+            loadedAssets[key] = result;
             return result;
 		}
 		
@@ -325,7 +358,7 @@ namespace Microsoft.Xna.Framework.Content
                     else
                         disposableAssets.Add(result as IDisposable);
                 }
-			}			
+			}
             
 			if (result == null)
 				throw new ContentLoadException("Could not load " + originalAssetName + " asset!");
@@ -351,10 +384,6 @@ namespace Microsoft.Xna.Framework.Content
             else if ((typeof(T) == typeof(SoundEffect)))
             {
                 return SoundEffectReader.Normalize(assetName);
-            }
-            else if ((typeof(T) == typeof(Video)))
-            {
-                return Video.Normalize(assetName);
             }
 #endif
             else if ((typeof(T) == typeof(Effect)))
@@ -388,11 +417,8 @@ namespace Microsoft.Xna.Framework.Content
             }
             else if ((typeof(T) == typeof(SoundEffect)))
             {
-                return new SoundEffect(assetName);
-            }
-            else if ((typeof(T) == typeof(Video)))
-            {
-                return new Video(assetName);
+                using (Stream s = TitleContainer.OpenStream(assetName))
+                    return SoundEffect.FromStream(s);
             }
 #endif
             else if ((typeof(T) == typeof(Effect)))
@@ -416,7 +442,7 @@ namespace Microsoft.Xna.Framework.Content
             byte platform = xnbReader.ReadByte();
 
             if (x != 'X' || n != 'N' || b != 'B' ||
-                !(platform == 'w' || platform == 'x' || platform == 'm'))
+                !(targetPlatformIdentifiers.Contains((char)platform)))
             {
                 throw new ContentLoadException("Asset does not appear to be a valid XNB file. Did you process your content for Windows?");
             }
@@ -424,7 +450,8 @@ namespace Microsoft.Xna.Framework.Content
             byte version = xnbReader.ReadByte();
             byte flags = xnbReader.ReadByte();
 
-            bool compressed = (flags & 0x80) != 0;
+            bool compressedLzx = (flags & ContentCompressedLzx) != 0;
+            bool compressedLz4 = (flags & ContentCompressedLz4) != 0;
             if (version != 5 && version != 4)
             {
                 throw new ContentLoadException("Invalid XNB version");
@@ -434,82 +461,84 @@ namespace Microsoft.Xna.Framework.Content
             int xnbLength = xnbReader.ReadInt32();
 
             ContentReader reader;
-            if (compressed)
+            if (compressedLzx || compressedLz4)
             {
-                //decompress the xnb
-                //thanks to ShinAli (https://bitbucket.org/alisci01/xnbdecompressor)
-                int compressedSize = xnbLength - 14;
+                // Decompress the xnb
                 int decompressedSize = xnbReader.ReadInt32();
-                int newFileSize = decompressedSize + 10;
+                MemoryStream decompressedStream = null;
 
-                MemoryStream decompressedStream = new MemoryStream(decompressedSize);
-
-                // default window size for XNB encoded files is 64Kb (need 16 bits to represent it)
-                LzxDecoder dec = new LzxDecoder(16);
-                int decodedBytes = 0;
-                long startPos = stream.Position;
-                long pos = startPos;
-
-#if ANDROID
-                // Android native stream does not support the Position property. LzxDecoder.Decompress also uses
-                // Seek.  So we read the entirity of the stream into a memory stream and replace stream with the
-                // memory stream.
-                MemoryStream memStream = new MemoryStream();
-                stream.CopyTo(memStream);
-                memStream.Seek(0, SeekOrigin.Begin);
-                stream.Dispose();
-                stream = memStream;
-                // Position is at the start of the MemoryStream as Stream.CopyTo copies from current position
-                pos = 0;
-#endif
-
-                while (pos - startPos < compressedSize)
+                if (compressedLzx)
                 {
-                    // the compressed stream is seperated into blocks that will decompress
-                    // into 32Kb or some other size if specified.
-                    // normal, 32Kb output blocks will have a short indicating the size
-                    // of the block before the block starts
-                    // blocks that have a defined output will be preceded by a byte of value
-                    // 0xFF (255), then a short indicating the output size and another
-                    // for the block size
-                    // all shorts for these cases are encoded in big endian order
-                    int hi = stream.ReadByte();
-                    int lo = stream.ReadByte();
-                    int block_size = (hi << 8) | lo;
-                    int frame_size = 0x8000; // frame size is 32Kb by default
-                    // does this block define a frame size?
-                    if (hi == 0xFF)
+                    //thanks to ShinAli (https://bitbucket.org/alisci01/xnbdecompressor)
+                    // default window size for XNB encoded files is 64Kb (need 16 bits to represent it)
+                    LzxDecoder dec = new LzxDecoder(16);
+                    decompressedStream = new MemoryStream(decompressedSize);
+                    int compressedSize = xnbLength - 14;
+                    long startPos = stream.Position;
+                    long pos = startPos;
+
+                    while (pos - startPos < compressedSize)
                     {
-                        hi = lo;
-                        lo = (byte)stream.ReadByte();
-                        frame_size = (hi << 8) | lo;
-                        hi = (byte)stream.ReadByte();
-                        lo = (byte)stream.ReadByte();
-                        block_size = (hi << 8) | lo;
-                        pos += 5;
+                        // the compressed stream is seperated into blocks that will decompress
+                        // into 32Kb or some other size if specified.
+                        // normal, 32Kb output blocks will have a short indicating the size
+                        // of the block before the block starts
+                        // blocks that have a defined output will be preceded by a byte of value
+                        // 0xFF (255), then a short indicating the output size and another
+                        // for the block size
+                        // all shorts for these cases are encoded in big endian order
+                        int hi = stream.ReadByte();
+                        int lo = stream.ReadByte();
+                        int block_size = (hi << 8) | lo;
+                        int frame_size = 0x8000; // frame size is 32Kb by default
+                        // does this block define a frame size?
+                        if (hi == 0xFF)
+                        {
+                            hi = lo;
+                            lo = (byte)stream.ReadByte();
+                            frame_size = (hi << 8) | lo;
+                            hi = (byte)stream.ReadByte();
+                            lo = (byte)stream.ReadByte();
+                            block_size = (hi << 8) | lo;
+                            pos += 5;
+                        }
+                        else
+                            pos += 2;
+
+                        // either says there is nothing to decode
+                        if (block_size == 0 || frame_size == 0)
+                            break;
+
+                        dec.Decompress(stream, block_size, decompressedStream, frame_size);
+                        pos += block_size;
+
+                        // reset the position of the input just incase the bit buffer
+                        // read in some unused bytes
+                        stream.Seek(pos, SeekOrigin.Begin);
                     }
-                    else
-                        pos += 2;
 
-                    // either says there is nothing to decode
-                    if (block_size == 0 || frame_size == 0)
-                        break;
+                    if (decompressedStream.Position != decompressedSize)
+                    {
+                        throw new ContentLoadException("Decompression of " + originalAssetName + " failed. ");
+                    }
 
-                    int lzxRet = dec.Decompress(stream, block_size, decompressedStream, frame_size);
-                    pos += block_size;
-                    decodedBytes += frame_size;
-
-                    // reset the position of the input just incase the bit buffer
-                    // read in some unused bytes
-                    stream.Seek(pos, SeekOrigin.Begin);
+                    decompressedStream.Seek(0, SeekOrigin.Begin);
                 }
-
-                if (decompressedStream.Position != decompressedSize)
+                else if (compressedLz4)
                 {
-                    throw new ContentLoadException("Decompression of " + originalAssetName + " failed. ");
+                    // Decompress to a byte[] because Windows 8 doesn't support MemoryStream.GetBuffer()
+                    var buffer = new byte[decompressedSize];
+                    using (var decoderStream = new Lz4DecoderStream(stream))
+                    {
+                        if (decoderStream.Read(buffer, 0, buffer.Length) != decompressedSize)
+                        {
+                            throw new ContentLoadException("Decompression of " + originalAssetName + " failed. ");
+                        }
+                    }
+                    // Creating the MemoryStream with a byte[] shares the buffer so it doesn't allocate any more memory
+                    decompressedStream = new MemoryStream(buffer);
                 }
 
-                decompressedStream.Seek(0, SeekOrigin.Begin);
                 reader = new ContentReader(this, decompressedStream, this.graphicsDeviceService.GraphicsDevice,
                                                             originalAssetName, version, recordDisposableObject);
             }
@@ -543,23 +572,18 @@ namespace Microsoft.Xna.Framework.Content
         {
             foreach (var asset in LoadedAssets)
             {
-                if (asset.Value is Texture2D)
-                {
-                    ReloadAsset<Texture2D>(asset.Key, asset.Value as Texture2D);
-                }
-                else if (asset.Value is SpriteFont)
-                {
-                    ReloadAsset<SpriteFont>(asset.Key, asset.Value as SpriteFont);
-                }
-                else if (asset.Value is Model)
-                {
-                    ReloadAsset<Model>(asset.Key, asset.Value as Model);
-                }
-                // Not requried as we are recompiling them from cached source in response to DeviceReset event
-                //else if (asset.Value is Effect)
-                //{
-                //    ReloadAsset<Effect>(asset.Key, asset.Value as Effect);
-                //}
+                // This never executes as asset.Key is never null.  This just forces the 
+                // linker to include the ReloadAsset function when AOT compiled.
+                if (asset.Key == null)
+                    ReloadAsset(asset.Key, Convert.ChangeType(asset.Value, asset.Value.GetType()));
+
+#if WINDOWS_STOREAPP
+                var methodInfo = typeof(ContentManager).GetType().GetTypeInfo().GetDeclaredMethod("ReloadAsset");
+#else
+                var methodInfo = typeof(ContentManager).GetMethod("ReloadAsset", BindingFlags.NonPublic | BindingFlags.Instance);
+#endif
+                var genericMethod = methodInfo.MakeGenericMethod(asset.Value.GetType());
+                genericMethod.Invoke(this, new object[] { asset.Key, Convert.ChangeType(asset.Value, asset.Value.GetType()) }); 
             }
         }
 

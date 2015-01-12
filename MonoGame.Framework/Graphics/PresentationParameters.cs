@@ -68,9 +68,11 @@ namespace Microsoft.Xna.Framework.Graphics
         private int backBufferHeight = GraphicsDeviceManager.DefaultBackBufferHeight;
         private int backBufferWidth = GraphicsDeviceManager.DefaultBackBufferWidth;
         private IntPtr deviceWindowHandle;
-        private bool isFullScreen;
         private int multiSampleCount;
-        private bool disposed;       	
+        private bool disposed;
+#if !WINRT
+        private bool isFullScreen;
+#endif
 
         #endregion Private Fields
 
@@ -120,7 +122,8 @@ namespace Microsoft.Xna.Framework.Graphics
         }
 
 #if WINDOWS_STOREAPP
-        public SwapChainBackgroundPanel SwapChainPanel { get; set; }
+        [CLSCompliant(false)]
+        public SwapChainBackgroundPanel SwapChainBackgroundPanel { get; set; }
 #endif
 
         public DepthFormat DepthStencilFormat
@@ -205,7 +208,7 @@ namespace Microsoft.Xna.Framework.Graphics
             depthStencilFormat = DepthFormat.None;
             multiSampleCount = 0;
             PresentationInterval = PresentInterval.Default;
-            DisplayOrientation = DisplayOrientation.Default;
+            DisplayOrientation = Microsoft.Xna.Framework.DisplayOrientation.Default;
         }
 
         public PresentationParameters Clone()

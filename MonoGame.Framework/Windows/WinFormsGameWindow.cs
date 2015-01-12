@@ -1,4 +1,4 @@
-#region License
+﻿#region License
 /*
 Microsoft Public License (Ms-PL)
 XnaTouch - Copyright © 2009 The XnaTouch Team
@@ -43,23 +43,29 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Input.Touch;
+using Microsoft.Xna.Framework.Windows;
+using SharpDX.Multimedia;
+using SharpDX.RawInput;
 using ButtonState = Microsoft.Xna.Framework.Input.ButtonState;
+using Point = System.Drawing.Point;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
 using XnaKey = Microsoft.Xna.Framework.Input.Keys;
+using XnaPoint = Microsoft.Xna.Framework.Point;
 
 namespace MonoGame.Framework
 {
-    public class WinFormsGameWindow : GameWindow
+    class WinFormsGameWindow : GameWindow
     {
-        private Form _form;
+        internal WinFormsGameForm _form;
 
-        private List<XnaKey> _keyState = new List<XnaKey>();
+        static private List<WinFormsGameWindow> _allWindows = new List<WinFormsGameWindow>();
 
-        private WinFormsGamePlatform _platform;
+        private readonly WinFormsGamePlatform _platform;
 
         private bool _isResizable;
 
@@ -108,9 +114,25 @@ namespace MonoGame.Framework
             }
         }
 
+        public override bool AllowAltF4
+        {
+             get { return base.AllowAltF4; }
+             set
+             {
+                 _form.AllowAltF4 = value;
+                 base.AllowAltF4 = value;
+             }
+        }
+
         public override DisplayOrientation CurrentOrientation
         {
             get { return DisplayOrientation.Default; }
+        }
+
+        public override XnaPoint Position
+        {
+            get { return new XnaPoint(_form.DesktopLocation.X, _form.DesktopLocation.Y); }
+            set { _form.DesktopLocation = new Point(value.X, value.Y); }
         }
 
         protected internal override void SetSupportedOrientations(DisplayOrientation orientations)
@@ -135,40 +157,45 @@ namespace MonoGame.Framework
 
         #endregion
 
+        #region Non-Public Properties
+
+        internal List<XnaKey> KeyState { get; set; }
+
+        #endregion
+
         internal WinFormsGameWindow(WinFormsGamePlatform platform)
         {
             _platform = platform;
             Game = platform.Game;
 
-            _form = new Form();
+            _form = new WinFormsGameForm(this);
             
             // When running unit tests this can return null.
             var assembly = Assembly.GetEntryAssembly();
             if (assembly != null)
                 _form.Icon = Icon.ExtractAssociatedIcon(assembly.Location);
+            Title = Utilities.AssemblyHelper.GetDefaultWindowTitle();
 
             _form.MaximizeBox = false;
             _form.FormBorderStyle = FormBorderStyle.FixedSingle;
-            _form.StartPosition = FormStartPosition.CenterScreen;
+            _form.StartPosition = FormStartPosition.CenterScreen;           
 
-            Mouse.SetWindows(_form);
-
-            // Capture mouse and keyboard events.
-            _form.MouseDown += OnMouseState;
-            _form.MouseMove += OnMouseState;
-            _form.MouseUp += OnMouseState;
-            _form.MouseWheel += OnMouseState;
-            _form.KeyDown += OnKeyDown;
-            _form.KeyUp += OnKeyUp;
+            // Capture mouse events.
+            _form.MouseWheel += OnMouseScroll;
             _form.MouseEnter += OnMouseEnter;
-            _form.MouseLeave += OnMouseLeave;
-            Keyboard.SetKeys(_keyState);
+            _form.MouseLeave += OnMouseLeave;            
+
+            // Use RawInput to capture key events.
+            Device.RegisterDevice(UsagePage.Generic, UsageId.GenericKeyboard, DeviceFlags.None);
+            Device.KeyboardInput += OnRawKeyEvent;
 
             _form.Activated += OnActivated;
             _form.Deactivate += OnDeactivate;
             _form.ClientSizeChanged += OnClientSizeChanged;
 
             _form.KeyPress += OnKeyPress;
+
+            _allWindows.Add(this);
         }
 
         private void OnActivated(object sender, EventArgs eventArgs)
@@ -179,22 +206,43 @@ namespace MonoGame.Framework
         private void OnDeactivate(object sender, EventArgs eventArgs)
         {
             _platform.IsActive = false;
-            _keyState.Clear();
+
+            if (KeyState != null)
+                KeyState.Clear();
         }
 
-        private void OnMouseState(object sender, MouseEventArgs mouseEventArgs)
+        private void OnMouseScroll(object sender, MouseEventArgs mouseEventArgs)
         {
-            var previousState = Mouse.State.LeftButton;
-            
-            Mouse.State.X = mouseEventArgs.X;
-            Mouse.State.Y = mouseEventArgs.Y;
-            Mouse.State.LeftButton = (mouseEventArgs.Button & MouseButtons.Left) == MouseButtons.Left ? ButtonState.Pressed : ButtonState.Released;
-            Mouse.State.MiddleButton = (mouseEventArgs.Button & MouseButtons.Middle) == MouseButtons.Middle ? ButtonState.Pressed : ButtonState.Released;
-            Mouse.State.RightButton = (mouseEventArgs.Button & MouseButtons.Right) == MouseButtons.Right ? ButtonState.Pressed : ButtonState.Released;
-            Mouse.State.ScrollWheelValue += mouseEventArgs.Delta;
+            MouseState.ScrollWheelValue += mouseEventArgs.Delta;
+        }
+
+        private void UpdateMouseState()
+        {
+            // If we call the form client functions before the form has
+            // been made visible it will cause the wrong window size to
+            // be applied at startup.
+            if (!_form.Visible)
+                return;
+
+            var clientPos = _form.PointToClient(Control.MousePosition);
+            var withinClient = _form.ClientRectangle.Contains(clientPos);
+            var buttons = Control.MouseButtons;
+
+            var previousState = MouseState.LeftButton;
+
+            MouseState.X = clientPos.X;
+            MouseState.Y = clientPos.Y;
+            MouseState.LeftButton = (buttons & MouseButtons.Left) == MouseButtons.Left ? ButtonState.Pressed : ButtonState.Released;
+            MouseState.MiddleButton = (buttons & MouseButtons.Middle) == MouseButtons.Middle ? ButtonState.Pressed : ButtonState.Released;
+            MouseState.RightButton = (buttons & MouseButtons.Right) == MouseButtons.Right ? ButtonState.Pressed : ButtonState.Released;
+
+            // Don't process touch state if we're not active 
+            // and the mouse is within the client area.
+            if (!_platform.IsActive || !withinClient)
+                return;
             
             TouchLocationState? touchState = null;
-            if (Mouse.State.LeftButton == ButtonState.Pressed)
+            if (MouseState.LeftButton == ButtonState.Pressed)
                 if (previousState == ButtonState.Released)
                     touchState = TouchLocationState.Pressed;
                 else
@@ -203,21 +251,8 @@ namespace MonoGame.Framework
                 touchState = TouchLocationState.Released;
 
             if (touchState.HasValue)
-                TouchPanel.AddEvent(0, touchState.Value, new Vector2(Mouse.State.X, Mouse.State.Y), true);
-        }
-
-        private void OnKeyDown(object sender, KeyEventArgs keyEventArgs)
-        {
-            var key = (XnaKey)keyEventArgs.KeyCode;
-            if (!_keyState.Contains(key))
-                _keyState.Add(key);
-        }
-
-        private void OnKeyUp(object sender, KeyEventArgs keyEventArgs)
-        {
-            var key = (XnaKey)keyEventArgs.KeyCode;
-            _keyState.Remove(key);
-        }
+                TouchPanelState.AddEvent(0, touchState.Value, new Vector2(MouseState.X, MouseState.Y), true);
+        } 
 
         private void OnMouseEnter(object sender, EventArgs e)
         {
@@ -239,31 +274,76 @@ namespace MonoGame.Framework
             }
         }
 
+        private void OnRawKeyEvent(object sender, KeyboardInputEventArgs args)
+        {
+            if (KeyState == null)
+                return;
+
+            if ((int)args.Key == 0xff)
+            {
+                // dead key, e.g. a "shift" automatically happens when using Up/Down/Left/Right
+                return;
+            }
+
+            XnaKey xnaKey;
+
+            switch (args.MakeCode)
+            {
+                case 0x2a: // LShift
+                    xnaKey = XnaKey.LeftShift;
+                    break;
+
+                case 0x36: // RShift
+                    xnaKey = XnaKey.RightShift;
+                    break;
+
+                case 0x1d: // Ctrl
+                    xnaKey = (args.ScanCodeFlags & ScanCodeFlags.E0) != 0 ? XnaKey.RightControl : XnaKey.LeftControl;
+                    break;
+
+                case 0x38: // Alt
+                    xnaKey = (args.ScanCodeFlags & ScanCodeFlags.E0) != 0 ? XnaKey.RightAlt : XnaKey.LeftAlt;
+                    break;
+
+                default:
+                    xnaKey = (XnaKey)args.Key;
+                    break;
+            }
+
+            if ((args.State == SharpDX.RawInput.KeyState.KeyDown || args.State == SharpDX.RawInput.KeyState.SystemKeyDown) && !KeyState.Contains(xnaKey))
+                KeyState.Add(xnaKey);
+            else if (args.State == SharpDX.RawInput.KeyState.KeyUp || args.State == SharpDX.RawInput.KeyState.SystemKeyUp)
+                KeyState.Remove(xnaKey);
+        }
+
         private void OnKeyPress(object sender, KeyPressEventArgs e)
         {
             OnTextInput(sender, new TextInputEventArgs(e.KeyChar));
         }
 
-        internal void Initialize()
-        {
-            var manager = Game.graphicsDeviceManager;
-            _form.ClientSize = new Size(manager.PreferredBackBufferWidth, manager.PreferredBackBufferHeight);
+        internal void Initialize(int width, int height)
+        {            
+            _form.ClientSize = new Size(width, height);
             _form.Show();
         }
 
         private void OnClientSizeChanged(object sender, EventArgs eventArgs)
         {
-            var manager = Game.graphicsDeviceManager;
+            if (Game.Window == this)
+            {
+                var manager = Game.graphicsDeviceManager;
 
-            // Set the default new back buffer size and viewport, but this
-            // can be overloaded by the two events below.
-            
-            var newWidth = _form.ClientRectangle.Width;
-            var newHeight = _form.ClientRectangle.Height;
-            manager.PreferredBackBufferWidth = newWidth;
-            manager.PreferredBackBufferHeight = newHeight;
-            if (manager.GraphicsDevice == null)
-                return;
+                // Set the default new back buffer size and viewport, but this
+                // can be overloaded by the two events below.
+
+                var newWidth = _form.ClientRectangle.Width;
+                var newHeight = _form.ClientRectangle.Height;
+                manager.PreferredBackBufferWidth = newWidth;
+                manager.PreferredBackBufferHeight = newHeight;
+
+                if (manager.GraphicsDevice == null)
+                    return;
+            }
 
             // Set the new view state which will trigger the 
             // Game.ApplicationViewChanged event and signal
@@ -281,6 +361,25 @@ namespace MonoGame.Framework
             Application.Idle += OnIdle;
             Application.Run(_form);
             Application.Idle -= OnIdle;
+
+
+            // We need to remove the WM_QUIT message in the message 
+            // pump as it will keep us from restarting on this 
+            // same thread.
+            //
+            // This is critical for some NUnit runners which
+            // typically will run all the tests on the same
+            // process/thread.
+
+            var msg = new NativeMessage();
+            do
+            {
+                if (msg.msg == WM_QUIT)
+                    break;
+
+                Thread.Sleep(100);
+            } 
+            while (PeekMessage(out msg, IntPtr.Zero, 0, 0, 1));
         }
 
         private void OnIdle(object sender, EventArgs eventArgs)
@@ -289,8 +388,20 @@ namespace MonoGame.Framework
             // to be processed tick the game.
             NativeMessage msg;
             while (!PeekMessage(out msg, IntPtr.Zero, 0, 0, 0))
+            {
+                UpdateWindows();
                 Game.Tick();
+            }
         }
+
+        internal void UpdateWindows()
+        {
+            // Update the mouse state for each window.
+            foreach (var window in _allWindows)
+                window.UpdateMouseState();
+        }
+
+        private const uint WM_QUIT = 0x12;
 
         [StructLayout(LayoutKind.Sequential)]
         public struct NativeMessage
@@ -318,6 +429,7 @@ namespace MonoGame.Framework
         {
             if (_form != null)
             {
+                _allWindows.Remove(this);
                 _form.Dispose();
                 _form = null;
             }

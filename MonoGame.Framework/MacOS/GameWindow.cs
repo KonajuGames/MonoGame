@@ -42,6 +42,8 @@ purpose and non-infringement.
 using System;
 using System.Drawing;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 
 using MonoMac.CoreAnimation;
 using MonoMac.Foundation;
@@ -56,12 +58,15 @@ using Microsoft.Xna.Framework.Input.Touch;
 
 namespace Microsoft.Xna.Framework
 {
+	[CLSCompliant(false)]
 	public class GameWindow : MonoMacGameView
 	{
 		//private readonly Rectangle clientBounds;
 		private Rectangle clientBounds;
 		private Game _game;
 		private MacGamePlatform _platform;
+        internal MouseState MouseState;
+        internal TouchPanelState TouchPanelState;
 
 		private NSTrackingArea _trackingArea;
 		private bool _needsToResetElapsedTime = false;
@@ -79,6 +84,7 @@ namespace Microsoft.Xna.Framework
                 throw new ArgumentNullException("game");
             _game = game;
             _platform = (MacGamePlatform)_game.Services.GetService(typeof(MacGamePlatform));
+            TouchPanelState = new TouchPanelState(this);
 
 			//LayerRetainsBacking = false; 
 			//LayerColorFormat	= EAGLColorFormat.RGBA8;
@@ -149,6 +155,7 @@ namespace Microsoft.Xna.Framework
 		protected override void OnLoad (EventArgs e)
 		{
 			base.OnLoad (e);
+			Title = MonoGame.Utilities.AssemblyHelper.GetDefaultWindowTitle();
 		}
 
 		protected override void OnRenderFrame (FrameEventArgs e)
@@ -162,6 +169,11 @@ namespace Microsoft.Xna.Framework
             //        Game.Tick-centric architecture may eliminate this problem
             //        automatically.
 			if (_game != null && _platform.IsRunning) {
+                if (_needsToResetElapsedTime) 
+                {
+                    _game.ResetElapsedTime ();
+					_needsToResetElapsedTime = false;
+                }
 				_game.Tick();
 			}
 		}
@@ -416,6 +428,11 @@ namespace Microsoft.Xna.Framework
 		public event EventHandler<EventArgs> ClientSizeChanged;
 		public event EventHandler<EventArgs> OrientationChanged;
 		public event EventHandler<EventArgs> ScreenDeviceNameChanged;
+
+		private bool SuppressEventHandlerWarningsUntilEventsAreProperlyImplemented()
+		{
+			return ScreenDeviceNameChanged != null;
+		}
 		
 		// make sure we get mouse move events.
 		public override bool AcceptsFirstResponder ()
@@ -494,6 +511,14 @@ namespace Microsoft.Xna.Framework
 
 		public override void KeyDown (NSEvent theEvent)
 		{
+			if (!string.IsNullOrEmpty (theEvent.Characters) && theEvent.Characters.All (c => char.GetUnicodeCategory (c) != UnicodeCategory.PrivateUse)) 
+			{
+				foreach(char c in theEvent.Characters)
+				{
+					OnTextInput(new TextInputEventArgs(c));
+				}
+			}
+
 			Keys kk = KeyUtil.GetKeys (theEvent); 
 
 			if (!_keys.Contains (kk))
@@ -510,6 +535,26 @@ namespace Microsoft.Xna.Framework
 
 			UpdateKeyboardState ();
 		}
+
+		protected void OnTextInput(TextInputEventArgs e)
+		{
+			if (e == null) 
+			{
+				throw new ArgumentNullException("e");
+			}
+			
+			if (TextInput != null) 
+			{
+				TextInput.Invoke(this, e);
+			}
+		}
+		
+		/// <summary>
+		/// Use this event to retrieve text for objects like textbox's.
+		/// This event is not raised by noncharacter keys.
+		/// This event also supports key repeat.
+		/// </summary>
+		public event EventHandler<TextInputEventArgs> TextInput;
 
 		List<Keys> _flags = new List<Keys> ();
 
@@ -554,7 +599,7 @@ namespace Microsoft.Xna.Framework
 			UpdateMousePosition (loc);
 			switch (theEvent.Type) {
 			case NSEventType.LeftMouseDown:
-				Mouse.State.LeftButton = ButtonState.Pressed;
+				MouseState.LeftButton = ButtonState.Pressed;
 				break;
 			}
 		}
@@ -566,7 +611,7 @@ namespace Microsoft.Xna.Framework
 			switch (theEvent.Type) {
 
 			case NSEventType.LeftMouseUp:
-				Mouse.State.LeftButton = ButtonState.Released;
+				MouseState.LeftButton = ButtonState.Released;
 				break;
 			}
 		}
@@ -583,7 +628,7 @@ namespace Microsoft.Xna.Framework
 			UpdateMousePosition (loc);
 			switch (theEvent.Type) {
 			case NSEventType.RightMouseDown:
-				Mouse.State.RightButton = ButtonState.Pressed;
+				MouseState.RightButton = ButtonState.Pressed;
 				break;
 			}
 		}
@@ -594,7 +639,7 @@ namespace Microsoft.Xna.Framework
 			UpdateMousePosition (loc);
 			switch (theEvent.Type) {
 			case NSEventType.RightMouseUp:
-				Mouse.State.RightButton = ButtonState.Released;
+				MouseState.RightButton = ButtonState.Released;
 				break;
 			}
 		}
@@ -611,7 +656,7 @@ namespace Microsoft.Xna.Framework
 			UpdateMousePosition (loc);
 			switch (theEvent.Type) {
 			case NSEventType.OtherMouseDown:
-				Mouse.State.MiddleButton = ButtonState.Pressed;
+				MouseState.MiddleButton = ButtonState.Pressed;
 				break;
 			}
 		}
@@ -622,7 +667,7 @@ namespace Microsoft.Xna.Framework
 			UpdateMousePosition (loc);
 			switch (theEvent.Type) {
 			case NSEventType.OtherMouseUp:
-				Mouse.State.MiddleButton = ButtonState.Released;
+				MouseState.MiddleButton = ButtonState.Released;
 				break;
 			}
 		}
@@ -634,19 +679,25 @@ namespace Microsoft.Xna.Framework
 		}
 		
 		public override void ScrollWheel (NSEvent theEvent)
-		{
-			PointF loc = theEvent.LocationInWindow;
-			UpdateMousePosition(loc);
-			
-			switch (theEvent.Type) {
-				case NSEventType.ScrollWheel:
-					if (theEvent.DeltaY > 0) {
-						Mouse.ScrollWheelValue += (theEvent.DeltaY*0.1f+0.09f)*1200;
-					} else {
-						Mouse.ScrollWheelValue += (theEvent.DeltaY*0.1f-0.09f)*1200;
-					}
-				break;
-			}	
+		{ 
+			PointF loc = theEvent.LocationInWindow; 
+			UpdateMousePosition (loc); 
+			switch (theEvent.Type) 
+			{ 
+			case NSEventType.ScrollWheel: 
+				if (theEvent.ScrollingDeltaY != 0) 
+				{ 
+					if (theEvent.ScrollingDeltaY > 0) 
+					{ 
+						Mouse.ScrollWheelValue += (theEvent.ScrollingDeltaY * 0.1f + 0.09f) * 1200; 
+					} 
+					else 
+					{ 
+						Mouse.ScrollWheelValue += (theEvent.ScrollingDeltaY * 0.1f - 0.09f) * 1200; 
+					} 
+				} 
+				break; 
+			} 
 		}
 
 		public override void MouseMoved (NSEvent theEvent)
@@ -663,8 +714,8 @@ namespace Microsoft.Xna.Framework
 
 		private void UpdateMousePosition (PointF location)
 		{
-			Mouse.State.X = (int)location.X;
-			Mouse.State.Y = (int)(ClientBounds.Height - location.Y);			
+			MouseState.X = (int)location.X;
+			MouseState.Y = (int)(ClientBounds.Height - location.Y);			
 		}
 
 		internal void SetSupportedOrientations(DisplayOrientation orientations)

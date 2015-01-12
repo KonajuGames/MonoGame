@@ -1,97 +1,55 @@
-using System;
-using System.Runtime.InteropServices;
+// MonoGame - Copyright (C) The MonoGame Team
+// This file is subject to the terms and conditions defined in
+// file 'LICENSE.txt', which is part of this source code package.
 
-#if OPENGL
-#if MONOMAC
-using MonoMac.OpenGL;
-#elif WINDOWS || LINUX
-using OpenTK.Graphics.OpenGL;
-#endif
-#elif DIRECTX
-using SharpDX;
-using SharpDX.Direct3D11;
-#elif PSM
-// TODO!
-#endif
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Xna.Framework.Graphics
 {
-	public class Texture3D : Texture
+	public partial class Texture3D : Texture
 	{
-        private int width;
-        private int height;
-        private int depth;
-		
-#if OPENGL
-		PixelInternalFormat glInternalFormat;
-		PixelFormat glFormat;
-		PixelType glType;
-#endif
+        private int _width;
+        private int _height;
+        private int _depth;
 
         public int Width
         {
-            get { return width; }
+            get { return _width; }
         }
 
         public int Height
         {
-            get { return height; }
+            get { return _height; }
         }
 
         public int Depth
         {
-            get { return depth; }
+            get { return _depth; }
         }
 
-		public Texture3D (GraphicsDevice graphicsDevice, int width, int height, int depth, bool mipMap, SurfaceFormat format)
+		public Texture3D(GraphicsDevice graphicsDevice, int width, int height, int depth, bool mipMap, SurfaceFormat format)
+            : this(graphicsDevice, width, height, depth, mipMap, format, false)
+		{		    
+		}
+
+		protected Texture3D (GraphicsDevice graphicsDevice, int width, int height, int depth, bool mipMap, SurfaceFormat format, bool renderTarget)
 		{
             if (graphicsDevice == null)
                 throw new ArgumentNullException("graphicsDevice");
 
 			this.GraphicsDevice = graphicsDevice;
-            this.width = width;
-            this.height = height;
-            this.depth = depth;
-            this.levelCount = 1;
+            this._width = width;
+            this._height = height;
+            this._depth = depth;
+            this._levelCount = 1;
+		    this._format = format;
 
-#if OPENGL
-			this.glTarget = TextureTarget.Texture3D;
-            
-            GL.GenTextures(1, out this.glTexture);
-            GraphicsExtensions.CheckGLError();
-
-			GL.BindTexture (glTarget, glTexture);
-            GraphicsExtensions.CheckGLError();
-
-			format.GetGLFormat (out glInternalFormat, out glFormat, out glType);
-
-			GL.TexImage3D (glTarget, 0, glInternalFormat, width, height, depth, 0, glFormat, glType, IntPtr.Zero);
-            GraphicsExtensions.CheckGLError();
-
-			if (mipMap) 
-                throw new NotImplementedException("Texture3D does not yet support mipmaps.");
-#elif DIRECTX
-            if (mipMap)
-                this.levelCount = CalculateMipLevels(width, height, depth);
-
-            var description = new Texture3DDescription
-            {
-                Width = width,
-                Height = height,
-                Depth = depth,
-                MipLevels = levelCount,
-                Format = SharpDXHelper.ToFormat(format),
-                BindFlags = BindFlags.ShaderResource,
-                CpuAccessFlags = CpuAccessFlags.None,
-                Usage = ResourceUsage.Default,
-                OptionFlags = ResourceOptionFlags.None,
-            };
-
-            _texture = new SharpDX.Direct3D11.Texture3D(graphicsDevice._d3dDevice, description);
-#endif
+            PlatformConstruct(graphicsDevice, width, height, depth, mipMap, format, renderTarget);
         }
-		
-		public void SetData<T> (T[] data) where T : struct
+
+        public void SetData<T>(T[] data) where T : struct
 		{
 			SetData<T>(data, 0, data.Length);
 		}
@@ -108,33 +66,64 @@ namespace Microsoft.Xna.Framework.Graphics
 			if (data == null) 
 				throw new ArgumentNullException("data");
 
-			var elementSizeInByte = Marshal.SizeOf(typeof(T));
-			var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
-			var dataPtr = (IntPtr)(dataHandle.AddrOfPinnedObject().ToInt64() + startIndex * elementSizeInByte);
             int width = right - left;
             int height = bottom - top;
             int depth = back - front;
 
-#if OPENGL
-            GL.BindTexture(glTarget, glTexture);
-            GraphicsExtensions.CheckGLError();
-			GL.TexSubImage3D(glTarget, level, left, top, front, width, height, depth, glFormat, glType, dataPtr);
-            GraphicsExtensions.CheckGLError();
-#elif DIRECTX
-            int rowPitch = GetPitch(width);
-            int slicePitch = rowPitch * height; // For 3D texture: Size of 2D image.
-            var box = new DataBox(dataPtr, rowPitch, slicePitch);
-
-            int subresourceIndex = level;
-
-            var region = new ResourceRegion(left, top, front, right, bottom, back);
-
-            var d3dContext = GraphicsDevice._d3dContext;
-            lock (d3dContext)
-                d3dContext.UpdateSubresource(box, _texture, subresourceIndex, region);
-#endif
-            dataHandle.Free ();
+            PlatformSetData<T>(level, left, top, right, bottom, front, back, data, startIndex, elementCount, width, height, depth);
 		}
+
+        /// <summary>
+        /// Gets a copy of 3D texture data, specifying a mipmap level, source box, start index, and number of elements.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the array.</typeparam>
+        /// <param name="level">Mipmap level.</param>
+        /// <param name="left">Position of the left side of the box on the x-axis.</param>
+        /// <param name="top">Position of the top of the box on the y-axis.</param>
+        /// <param name="right">Position of the right side of the box on the x-axis.</param>
+        /// <param name="bottom">Position of the bottom of the box on the y-axis.</param>
+        /// <param name="front">Position of the front of the box on the z-axis.</param>
+        /// <param name="back">Position of the back of the box on the z-axis.</param>
+        /// <param name="data">Array of data.</param>
+        /// <param name="startIndex">Index of the first element to get.</param>
+        /// <param name="elementCount">Number of elements to get.</param>
+        public void GetData<T>(int level, int left, int top, int right, int bottom, int front, int back, T[] data, int startIndex, int elementCount) where T : struct
+        {
+            if (data == null || data.Length == 0)
+                throw new ArgumentException("data cannot be null");
+            if (data.Length < startIndex + elementCount)
+                throw new ArgumentException("The data passed has a length of " + data.Length + " but " + elementCount + " pixels have been requested.");
+
+            // Disallow negative box size
+            if ((left < 0 || left >= right)
+                || (top < 0 || top >= bottom)
+                || (front < 0 || front >= back))
+                throw new ArgumentException("Neither box size nor box position can be negative");
+
+            PlatformGetData(level, left, top, right, bottom, front, back, data, startIndex, elementCount);
+        }
+
+        /// <summary>
+        /// Gets a copy of 3D texture data, specifying a start index and number of elements.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the array.</typeparam>
+        /// <param name="data">Array of data.</param>
+        /// <param name="startIndex">Index of the first element to get.</param>
+        /// <param name="elementCount">Number of elements to get.</param>
+        public void GetData<T>(T[] data, int startIndex, int elementCount) where T : struct
+        {
+            GetData(0, 0, 0, _width, _height, 0, _depth, data, startIndex, elementCount);
+        }
+
+        /// <summary>
+        /// Gets a copy of 3D texture data.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements in the array.</typeparam>
+        /// <param name="data">Array of data.</param>
+        public void GetData<T>(T[] data) where T : struct
+        {
+            GetData(data, 0, data.Length);
+        }
 	}
 }
 

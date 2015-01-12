@@ -61,12 +61,12 @@ namespace Microsoft.Xna.Framework
 		private GameTime _updateGameTime;
         private GameTime _drawGameTime;
         private DateTime _lastUpdate;
-		private DateTime _now;
-        private DisplayOrientation _currentOrientation;
+		//private DateTime _now;
+        //private DisplayOrientation _currentOrientation;
 		// TODO private GestureDetector gesture = null;
-		private bool _needsToResetElapsedTime = false;
-		private bool _isFirstTime = true;
-		private TimeSpan _extraElapsedTime;
+		//private bool _needsToResetElapsedTime = false;
+		//private bool _isFirstTime = true;
+		//private TimeSpan _extraElapsedTime;
 
         public PSSGameWindow(Game game)
         {
@@ -85,14 +85,14 @@ namespace Microsoft.Xna.Framework
             _drawGameTime = new GameTime();
 
             // Initialize _lastUpdate
-            _lastUpdate = DateTime.Now;
+            _lastUpdate = DateTime.UtcNow;
 			
 			//TODO gesture = new GestureDetector(new GestureListener((AndroidGameActivity)this.Context));
         }
 
 		public void ResetElapsedTime ()
 		{
-			_needsToResetElapsedTime = true;
+			//_needsToResetElapsedTime = true;
 		}
 
 		public void Close ()

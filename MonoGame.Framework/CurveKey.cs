@@ -1,34 +1,13 @@
-#region License
-/*
-MIT License
-Copyright © 2006 The Mono.Xna Team
-
-All rights reserved.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-#endregion License
+// MIT License - Copyright (C) The Mono.Xna Team
+// This file is subject to the terms and conditions defined in
+// file 'LICENSE.txt', which is part of this source code package.
 
 using System;
+using System.Runtime.Serialization;
 
 namespace Microsoft.Xna.Framework
 {
+ [DataContract]
     public class CurveKey : IEquatable<CurveKey>, IComparable<CurveKey>
     {
         #region Private Fields
@@ -44,29 +23,34 @@ namespace Microsoft.Xna.Framework
 
         #region Properties
 
+        [DataMember]
         public CurveContinuity Continuity
         {
             get { return this.continuity; }
             set { this.continuity = value; }
         }
 
+        [DataMember]
         public float Position
         {
             get { return this.position; }
         }
 
+        [DataMember]
         public float TangentIn
         {
             get { return this.tangentIn; }
             set { this.tangentIn = value; }
         }
 
+        [DataMember]
         public float TangentOut
         {
             get { return this.tangentOut; }
             set { this.tangentOut = value; }
         }
 
+        [DataMember]
         public float Value
         {
             get { return this.value; }

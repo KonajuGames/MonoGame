@@ -34,11 +34,7 @@ using System.Runtime.Serialization;
 
 namespace Microsoft.Xna.Framework.Graphics
 {
-#if WINRT
     [DataContract]
-#else
-    [Serializable]
-#endif
     public class DisplayMode
     {
         #region Fields
@@ -53,7 +49,7 @@ namespace Microsoft.Xna.Framework.Graphics
         #region Properties
         
         public float AspectRatio {
-            get { return width / height; }
+            get { return (float)width / (float)height; }
         }
 
         public SurfaceFormat Format {
@@ -99,6 +95,14 @@ namespace Microsoft.Xna.Framework.Graphics
 
         public static bool operator ==(DisplayMode left, DisplayMode right)
         {
+            if (ReferenceEquals(left, right)) //Same object or both are null
+            {
+                return true;
+            }
+            if (ReferenceEquals(left, null) || ReferenceEquals(right, null))
+            {
+                return false;
+            }
             return (left.format == right.format) &&
                 (left.height == right.height) &&
                 (left.refreshRate == right.refreshRate) &&
@@ -121,7 +125,7 @@ namespace Microsoft.Xna.Framework.Graphics
 
         public override string ToString()
         {
-            return string.Format(CultureInfo.CurrentCulture, "{{Width:{0} Height:{1} Format:{2} RefreshRate{3}}}", new object[] { this.width, this.height, this.Format, this.refreshRate });
+            return "{{Width:" + this.width + " Height:" + this.height + " Format:" + this.Format + " RefreshRate:" + this.refreshRate + "}}";
         }
 
         #endregion Public Methods
