@@ -26,8 +26,9 @@ namespace Microsoft.Xna.Framework.Graphics
         private Rectangle _scissorRectangle;
         private bool _scissorRectangleDirty;
   
-        private VertexBuffer _vertexBuffer;
-        private bool _vertexBufferDirty;
+        private bool _vertexBuffersDirty;
+        private VertexBufferBinding[] _vertexBufferBindings;
+        private int _vertexBufferCount;
 
         private IndexBuffer _indexBuffer;
         private bool _indexBufferDirty;
@@ -92,6 +93,7 @@ namespace Microsoft.Xna.Framework.Graphics
         }
 
         internal int MaxTextureSlots;
+        internal int MaxVertexBufferSlots = 1;
 
         public bool IsDisposed
         {
@@ -204,9 +206,13 @@ namespace Microsoft.Xna.Framework.Graphics
 
             // Force set the buffers and shaders on next ApplyState() call
             _indexBufferDirty = true;
-            _vertexBufferDirty = true;
+            _vertexBuffersDirty = true;
             _vertexShaderDirty = true;
             _pixelShaderDirty = true;
+            _vertexBufferBindings = new VertexBufferBinding[MaxVertexBufferSlots];
+            for (int i = 0; i < MaxVertexBufferSlots; ++i)
+                _vertexBufferBindings[i] = VertexBufferBinding.None;
+            _vertexBufferCount = 0;
 
             // Set the default scissor rect.
             _scissorRectangleDirty = true;
@@ -552,11 +558,75 @@ namespace Microsoft.Xna.Framework.Graphics
 
         public void SetVertexBuffer(VertexBuffer vertexBuffer)
         {
-            if (_vertexBuffer == vertexBuffer)
-                return;
+            SetVertexBuffer(vertexBuffer, 0);
+        }
 
-            _vertexBuffer = vertexBuffer;
-            _vertexBufferDirty = true;
+        public void SetVertexBuffer(VertexBuffer vertexBuffer, int vertexOffset)
+        {
+            if (vertexBuffer == null)
+            {
+                if (_vertexBufferCount > 0)
+                {
+                    for (int i = 0; i < _vertexBufferCount; ++i)
+                        _vertexBufferBindings[i] = VertexBufferBinding.None;
+                    _vertexBufferCount = 0;
+                    _vertexBuffersDirty = true;
+                }
+                return;
+            }
+
+            // Do we need to clear any previously bound vertex buffers beyond the first element?
+            if (_vertexBufferCount > 1)
+            {
+                for (int i = 1; i < _vertexBufferCount; ++i)
+                    _vertexBufferBindings[i] = VertexBufferBinding.None;
+                _vertexBuffersDirty = true;
+            }
+            _vertexBufferCount = 1;
+
+            // Is it a different vertex buffer than previously bound?
+            var current = _vertexBufferBindings[0];
+            if (!ReferenceEquals(vertexBuffer, current.VertexBuffer) || vertexOffset != current.VertexOffset)
+            {
+                _vertexBufferBindings[0] = new VertexBufferBinding(vertexBuffer, vertexOffset);
+                _vertexBuffersDirty = true;
+            }
+        }
+
+        public void SetVertexBuffers(params VertexBufferBinding[] vertexBuffers)
+        {
+            // Unbinding all vertex buffers
+            if (vertexBuffers == null || vertexBuffers.Length == 0)
+            {
+                if (_vertexBufferCount > 0)
+                {
+                    for (int i = 0; i < _vertexBufferCount; ++i)
+                        _vertexBufferBindings[i] = VertexBufferBinding.None;
+                    _vertexBufferCount = 0;
+                    _vertexBuffersDirty = true;
+                }
+                return;
+            }
+
+            // Zero out any bindings beyond the new count
+            if (_vertexBufferCount > vertexBuffers.Length)
+            {
+                for (int i = vertexBuffers.Length; i < _vertexBufferCount; ++i)
+                    _vertexBufferBindings[i] = VertexBufferBinding.None;
+                _vertexBuffersDirty = true;
+            }
+
+            // Bind the new vertex buffers
+            for (int i = 0; i < vertexBuffers.Length; ++i)
+            {
+                var binding = vertexBuffers[i];
+                var current = _vertexBufferBindings[i];
+                if (!ReferenceEquals(binding.VertexBuffer, current.VertexBuffer) || binding.VertexOffset != current.VertexOffset || binding.InstanceFrequency != current.InstanceFrequency)
+                {
+                    _vertexBufferBindings[i] = binding;
+                    _vertexBuffersDirty = true;
+                }
+            }
         }
 
         private void SetIndexBuffer(IndexBuffer indexBuffer)
@@ -566,6 +636,27 @@ namespace Microsoft.Xna.Framework.Graphics
             
             _indexBuffer = indexBuffer;
             _indexBufferDirty = true;
+        }
+
+        public VertexBufferBinding[] GetVertexBuffers()
+        {
+            var result = new VertexBufferBinding[_vertexBufferCount];
+            if (_vertexBufferCount > 0)
+                Array.Copy(_vertexBufferBindings, result, _vertexBufferCount);
+            return result;
+        }
+
+        /// <summary>
+        /// MonoGame Extension. Retrieves the currently bound vertex buffers without allocating memory for an array copy.
+        /// </summary>
+        /// <param name="vertexBuffers">A user-supplied array that will be filled with the vertex buffer bindings.</param>
+        /// <returns>The number of entries used in the supplied array.</returns>
+        public int GetVertexBuffers(VertexBufferBinding[] vertexBuffers)
+        {
+            if (vertexBuffers.Length < _vertexBufferCount)
+                throw new ArgumentException("Supplied array is not large enough (requires at least " + _vertexBufferCount.ToString() + " elements)");
+            Array.Copy(_vertexBufferBindings, vertexBuffers, _vertexBufferCount);
+            return _vertexBufferCount;
         }
 
         public IndexBuffer Indices { set { SetIndexBuffer(value); } get { return _indexBuffer; } }
@@ -620,7 +711,7 @@ namespace Microsoft.Xna.Framework.Graphics
         /// <remarks>Note that minVertexIndex and numVertices are unused in MonoGame and will be ignored.</remarks>
         public void DrawIndexedPrimitives(PrimitiveType primitiveType, int baseVertex, int minVertexIndex, int numVertices, int startIndex, int primitiveCount)
         {
-            Debug.Assert(_vertexBuffer != null, "The vertex buffer is null!");
+            Debug.Assert(_vertexBufferBindings[0].VertexBuffer != null, "The vertex buffer is null!");
             Debug.Assert(_indexBuffer != null, "The index buffer is null!");
 
             // NOTE: minVertexIndex and numVertices are only hints of the
@@ -648,7 +739,7 @@ namespace Microsoft.Xna.Framework.Graphics
 
         public void DrawPrimitives(PrimitiveType primitiveType, int vertexStart, int primitiveCount)
         {
-            Debug.Assert(_vertexBuffer != null, "The vertex buffer is null!");
+            Debug.Assert(_vertexBufferBindings[0].VertexBuffer != null, "The vertex buffer is null!");
 
             var vertexCount = GetElementCountArray(primitiveType, primitiveCount);
 

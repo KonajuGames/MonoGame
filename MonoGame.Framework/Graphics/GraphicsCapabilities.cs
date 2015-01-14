@@ -86,6 +86,11 @@ namespace Microsoft.Xna.Framework.Graphics
         /// supported.
         /// </summary>
         internal int MaxTextureAnisotropy { get; private set; }
+
+        /// <summary>
+        /// The maximum number of vertex buffers that can be used in the same shader.
+        /// </summary>
+        internal int MaxVertexAttributes { get; private set; }
 #endif
 
         internal bool SupportsTextureMaxLevel { get; private set; }
@@ -152,6 +157,15 @@ namespace Microsoft.Xna.Framework.Graphics
                 GraphicsExtensions.CheckGLError();
             }
             MaxTextureAnisotropy = anisotropy;
+#endif
+
+            // Max vertex attributes
+#if GLES && !ANGLE
+            GL.GetInteger(All.MaxVertexAttribs, ref MaxVertexAttributes);
+            GraphicsExtensions.CheckGLError();
+#elif OPENGL
+            GL.GetInteger(GetPName.MaxVertexAttribs, out MaxVertexAttributes);
+            GraphicsExtensions.CheckGLError();
 #endif
         }
 

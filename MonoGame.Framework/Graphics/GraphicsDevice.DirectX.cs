@@ -72,6 +72,8 @@ namespace Microsoft.Xna.Framework.Graphics
 
         private readonly Dictionary<IndexElementSize, DynamicIndexBuffer> _userIndexBuffers = new Dictionary<IndexElementSize, DynamicIndexBuffer>();
 
+        private int _currentVertexBufferBindingCount;
+
 #if WINDOWS_STOREAPP
 
         internal float Dpi
@@ -588,6 +590,9 @@ namespace Microsoft.Xna.Framework.Graphics
 
             // Get Direct3D 11.1 context
             _d3dContext = _d3dDevice.ImmediateContext.QueryInterface<SharpDX.Direct3D11.DeviceContext>();
+
+            var featureLevel = _d3dDevice.FeatureLevel;
+            MaxVertexBufferSlots = featureLevel >= FeatureLevel.Level_11_0 ? SharpDX.Direct3D11.InputAssemblerStage.VertexInputResourceSlotCount : 16;
         }
 
         internal void CreateSizeDependentResources()
@@ -1067,13 +1072,22 @@ namespace Microsoft.Xna.Framework.Graphics
                 _indexBufferDirty = false;
             }
 
-            if (_vertexBufferDirty)
+            if (_vertexBuffersDirty)
             {
-                if (_vertexBuffer != null)
-                    _d3dContext.InputAssembler.SetVertexBuffers(0, _vertexBuffer.Binding);
-                else
-                    _d3dContext.InputAssembler.SetVertexBuffers(0);
+                if (_currentVertexBufferBindingCount > _vertexBufferCount)
+                {
+                    for (int i = _vertexBufferCount; i < _currentVertexBufferBindingCount; ++i)
+                        _d3dContext.InputAssembler.SetVertexBuffers(0);
+                }
+                for (int i = 0; i < _vertexBufferCount; ++i)
+                {
+                    var binding = _vertexBufferBindings[i];
+                    var dxBinding = binding.VertexBuffer.Binding;
+                    dxBinding.Offset = binding.VertexOffset;
+                    _d3dContext.InputAssembler.SetVertexBuffers(i, dxBinding);
+                }
             }
+            _currentVertexBufferBindingCount = _vertexBufferCount;
 
             if (_vertexShader == null)
                 throw new InvalidOperationException("A vertex shader must be set!");
@@ -1083,10 +1097,10 @@ namespace Microsoft.Xna.Framework.Graphics
             if (_vertexShaderDirty)
                 _d3dContext.VertexShader.Set(_vertexShader.VertexShader);
 
-            if (_vertexShaderDirty || _vertexBufferDirty)
+            if (_vertexShaderDirty || _vertexBuffersDirty)
             {
-                _d3dContext.InputAssembler.InputLayout = GetInputLayout(_vertexShader, _vertexBuffer.VertexDeclaration);
-                _vertexShaderDirty = _vertexBufferDirty = false;
+                _d3dContext.InputAssembler.InputLayout = GetInputLayout(_vertexShader, _vertexBufferBindings[0].VertexBuffer.VertexDeclaration);
+                _vertexShaderDirty = _vertexBuffersDirty = false;
             }
 
             if (_pixelShaderDirty)

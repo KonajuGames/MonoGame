@@ -189,12 +189,13 @@ namespace Microsoft.Xna.Framework.Graphics
 #endif
 
             MaxTextureSlots = 16;
-
+            MaxVertexBufferSlots = GraphicsCapabilities.MaxVertexAttributes;
+            
 #if  IOS
             GL.GetInteger(All.MaxTextureImageUnits, ref MaxTextureSlots);
             GraphicsExtensions.CheckGLError();
 
-            GL.GetInteger(All.MaxVertexAttribs, ref MaxVertexAttributes);
+            GL.GetInteger(All.MaxVertexAttribs, ref MaxVertexBufferSlots);
             GraphicsExtensions.CheckGLError();
 
             GL.GetInteger(All.MaxTextureSize, ref _maxTextureSize);
@@ -203,7 +204,7 @@ namespace Microsoft.Xna.Framework.Graphics
             GL.GetInteger(GetPName.MaxTextureImageUnits, out MaxTextureSlots);
             GraphicsExtensions.CheckGLError();
 
-            GL.GetInteger(GetPName.MaxVertexAttribs, out MaxVertexAttributes);
+            GL.GetInteger(GetPName.MaxVertexAttribs, out MaxVertexBufferSlots);
             GraphicsExtensions.CheckGLError();
             
             GL.GetInteger(GetPName.MaxTextureSize, out _maxTextureSize);
