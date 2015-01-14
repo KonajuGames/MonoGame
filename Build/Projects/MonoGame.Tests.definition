@@ -5,6 +5,7 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml" />
+	<Reference Include="System.Web" />
     <Reference Include="MonoGame.Framework" />
     <Reference Include="MonoGame.Framework.Content.Pipeline" />
     <Reference Include="MonoGame.Tests.References" />
@@ -89,14 +90,20 @@
     <Compile Include="Framework\PackedVectorTest.cs" />
     <Compile Include="Framework\TouchCollectionTest.cs" />
     <Compile Include="Framework\TouchPanelTest.cs" />
+    <Compile Include="Framework\TouchLocationTest.cs" />
     <Compile Include="Framework\Bounding.cs" />
     <Compile Include="Framework\MathHelperTest.cs" />
+    <Compile Include="Framework\PlaneTest.cs" />
     <Compile Include="Framework\RayTest.cs" />
+	<Compile Include="Framework\RectangleTest.cs" />
     <Compile Include="Framework\GameTest+Methods.cs" />
     <Compile Include="Framework\GameTest+Properties.cs" />
     <Compile Include="Framework\GameTest.cs" />
     <Compile Include="Framework\TestGameBase.cs" />
-
+    <Compile Include="Framework\GamePadStateTest.cs" />
+    <Compile Include="Framework\UtilitiesTest.cs" />
+	<Compile Include="Framework\Vector2Test.cs" />
+	
     <Compile Include="Framework\Components\DrawFrameNumberComponent.cs" />
     <Compile Include="Framework\Components\FlexibleGameComponent.cs" />
     <Compile Include="Framework\Components\FrameCompareComponent.cs" />
@@ -112,6 +119,8 @@
     <Compile Include="Framework\Visual\ScissorRectangleTest.cs" />
     <Compile Include="Framework\Visual\Texture2DTest.cs" />
     <Compile Include="Framework\Visual\Texture3DTest.cs" />
+    <Compile Include="Framework\Visual\IndexBufferTest.cs" />
+    <Compile Include="Framework\Visual\VertexBufferTest.cs" />
     <Compile Include="Framework\Visual\MiscellaneousTests.cs" />
     <Compile Include="Framework\Visual\ShaderTest.cs" />
     <Compile Include="Framework\Visual\SpriteBatchTest.cs" />
@@ -126,10 +135,28 @@
     <Compile Include="ContentPipeline\EffectProcessorTests.cs">
         <Platforms>Windows</Platforms>
     </Compile>
+    <Compile Include="ContentPipeline\FontDescriptionTests.cs">
+        <Platforms>Windows,MacOS,Linux</Platforms>
+    </Compile>
     <Compile Include="ContentPipeline\IntermediateDeserializerTest.cs">
         <Platforms>Windows,MacOS,Linux</Platforms>
     </Compile>
+    <Compile Include="ContentPipeline\IntermediateSerializerTest.cs">
+        <Platforms>Windows,MacOS,Linux</Platforms>
+    </Compile>
     <Compile Include="ContentPipeline\ModelProcessorTests.cs">
+        <Platforms>Windows,MacOS,Linux</Platforms>
+    </Compile>
+    <Compile Include="ContentPipeline\TestContentBuildLogger.cs">
+        <Platforms>Windows,MacOS,Linux</Platforms>
+    </Compile>
+    <Compile Include="ContentPipeline\TestProcessorContext.cs">
+        <Platforms>Windows,MacOS,Linux</Platforms>
+    </Compile>
+    <Compile Include="ContentPipeline\TextureContentTests.cs">
+        <Platforms>Windows,MacOS,Linux</Platforms>
+    </Compile>
+    <Compile Include="ContentPipeline\TextureProcessorTests.cs">
         <Platforms>Windows,MacOS,Linux</Platforms>
     </Compile>
 
@@ -452,6 +479,9 @@
     <Content Include="Assets\Xml\04_ExcludingPublicMembers.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+	<Content Include="Assets\Xml\04_ExcludingPublicMembersOutput.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Assets\Xml\05_RenamingXmlElements.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -492,6 +522,15 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\Xml\18_PrimitiveTypes.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+	<Content Include="Assets\Xml\19_FontDescription.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Xml\20_SystemTypes.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+	<Content Include="Assets\Xml\21_QualifiedTypes.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
 

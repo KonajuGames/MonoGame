@@ -5,6 +5,7 @@
   <property name="mdtooldir" value="/Applications/MonoDevelop.app/Contents/MacOS"/>
   <property name="psmtooldir" value="C:\Program Files (x86)\SCE\PSM\tools\PsmStudio\bin" />
   <property name="msbuild12dir" value="C:\Program Files (x86)\MSBuild\12.0\Bin" />
+
   <!-- Temporary work around so that we don't need to change the targets on the build server -->
   <target name="build" depends="build_code,run_tests,build_docs,build_installer" />
 
@@ -107,6 +108,9 @@
       <exec program="mono" commandline="Protobuild.exe -generate MacOS" />
       <exec program="mdtool" basedir="${mdtooldir}" commandline="build -t:Clean -c:Release MonoGame.Framework.MacOS.sln" />
       <exec program="mdtool" basedir="${mdtooldir}" commandline="build -t:Build -c:Release MonoGame.Framework.MacOS.sln" />
+      <delete dir="${project::get-base-directory()}\Tools\Pipeline\bin\MacOS\AnyCPU\Release\*.pkg" />
+      <exec program="pkgbuild" workingdir="Tools/Pipeline/bin/MacOS/AnyCPU/Release" commandline=" --component ./Pipeline.app --identifier com.monogame.pipeline --version 1 --install-location /Applications Pipeline.MacOS.pkg" />
+      <exec program="productbuild" workingdir="Tools/Pipeline/bin/MacOS/AnyCPU/Release" commandline=" --distribution distribution.xml --resources ./Resources --package-path Pipeline.MacOS.pkg Pipeline.Installer.pkg" />
     </if>
   </target>
 
@@ -181,8 +185,10 @@
   </target>
 
   <target name="run_tests" description="Run all the tests" depends="build_code">
-    <if test="${os == 'Win32NT'}">
-    </if>
+    <nunit2 if="${os == 'Win32NT'}">
+      <formatter type="Xml" usefile="true" extension=".xml" outputdir="Test\bin\Windows\AnyCPU\Release" />
+      <test assemblyname="Test\bin\Windows\AnyCPU\Release\MonoGameTests.exe" />
+    </nunit2>
   </target>
 
   <target name="build_docs" description="Build the documentation." depends="build_code,run_tests">

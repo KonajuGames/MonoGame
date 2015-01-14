@@ -4,12 +4,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Intermediate
 {
     abstract class ElementSerializer<T> : ContentTypeSerializer<T>
     {
-        private static readonly char [] _seperators = new[] { ' ', '\t' };
+        private static readonly char [] _seperators = { ' ', '\t' };
 
         private const string _writeSeperator = " ";
 
@@ -30,11 +31,21 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Intermediate
 
         protected internal abstract void Serialize(T value, List<string> results);
 
-        protected internal void Deserialize(IntermediateReader input, List<T> results)
+        private static string[] ReadElements(IntermediateReader input)
         {
             var str = input.Xml.ReadString();
-            var elements = str.Split(_seperators, StringSplitOptions.RemoveEmptyEntries);
 
+            var elements = str.Split(_seperators, StringSplitOptions.RemoveEmptyEntries);
+            if (elements.Length == 0)
+                elements = new[] { str };
+
+            return elements;
+        }
+
+        protected internal void Deserialize(IntermediateReader input, List<T> results)
+        {
+            var elements = ReadElements(input);
+                            
             for (var index = 0; index < elements.Length;)
             {
                 if (elements.Length - index < _elementCount)
@@ -47,10 +58,11 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Intermediate
 
         protected internal override T Deserialize(IntermediateReader input, ContentSerializerAttribute format, T existingInstance)
         {
-            var str = input.Xml.ReadString();
-            var elements = str.Split(_seperators, StringSplitOptions.RemoveEmptyEntries);
+            var elements = ReadElements(input);
+
             if (elements.Length < _elementCount)
                 ThrowElementCountException();
+
             var index = 0;
             return Deserialize(elements, ref index);
         }

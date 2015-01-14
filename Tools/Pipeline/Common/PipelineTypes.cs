@@ -249,7 +249,12 @@ namespace MonoGame.Tools.Pipeline
             var cur = 0;
             foreach (var item in _importers)
             {
-                var outputType = item.Type.BaseType.GetGenericArguments()[0];
+                // Find the abstract base class ContentImporter<T>.
+                var baseType = item.Type.BaseType;
+                while (!baseType.IsAbstract)
+                    baseType = baseType.BaseType;
+
+                var outputType = baseType.GetGenericArguments()[0];
                 var desc = new ImporterTypeDescription()
                     {
                         TypeName = item.Type.Name,
@@ -418,7 +423,7 @@ namespace MonoGame.Tools.Pipeline
                 try
                 {                    
                     var a = Assembly.LoadFrom(path);
-                    var types = a.GetExportedTypes();
+                    var types = a.GetTypes();
                     ProcessTypes(types);
                 }
                 catch 
