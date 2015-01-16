@@ -100,21 +100,22 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Graphics
             // TODO: This should be refactored to use FreeImage 
             // with a higher quality filter.
 
-            var destination = new Bitmap(newWidth, newHeight);
-
-            using (var source = content.Faces[0][0].ToSystemBitmap())
-            using (var graphics = System.Drawing.Graphics.FromImage(destination))
+            using (var destination = new Bitmap(newWidth, newHeight))
             {
-                var imageAttr = new ImageAttributes();
-                imageAttr.SetWrapMode(WrapMode.TileFlipXY);
+                using (var source = content.Faces[0][0].ToSystemBitmap())
+                using (var graphics = System.Drawing.Graphics.FromImage(destination))
+                {
+                    var imageAttr = new ImageAttributes();
+                    imageAttr.SetWrapMode(WrapMode.TileFlipXY);
 
-                var destRect = new System.Drawing.Rectangle(0, 0, newWidth, newHeight);
+                    var destRect = new System.Drawing.Rectangle(0, 0, newWidth, newHeight);
 
-                graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
-                graphics.DrawImage(source, destRect, 0, 0, source.Width, source.Height, GraphicsUnit.Pixel, imageAttr);
+                    graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
+                    graphics.DrawImage(source, destRect, 0, 0, source.Width, source.Height, GraphicsUnit.Pixel, imageAttr);
+                }
+
+                content.Faces[0][0] = destination.ToXnaBitmap(false); //we dont want to flip colors twice            
             }
-
-            content.Faces[0][0] = destination.ToXnaBitmap(false); //we dont want to flip colors twice            
         }
 
         public static BitmapContent ToXnaBitmap(this Bitmap systemBitmap, bool flipColors)
