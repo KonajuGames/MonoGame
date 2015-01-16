@@ -627,6 +627,7 @@ namespace Microsoft.Xna.Framework.Graphics
                     _vertexBuffersDirty = true;
                 }
             }
+            _vertexBufferCount = vertexBuffers.Length;
         }
 
         private void SetIndexBuffer(IndexBuffer indexBuffer)

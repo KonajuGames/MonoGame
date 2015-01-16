@@ -1099,7 +1099,7 @@ namespace Microsoft.Xna.Framework.Graphics
 
             if (_vertexShaderDirty || _vertexBuffersDirty)
             {
-                _d3dContext.InputAssembler.InputLayout = GetInputLayout(_vertexShader, _vertexBufferBindings[0].VertexBuffer.VertexDeclaration);
+                _d3dContext.InputAssembler.InputLayout = GetInputLayout();
                 _vertexShaderDirty = _vertexBuffersDirty = false;
             }
 
@@ -1116,15 +1116,38 @@ namespace Microsoft.Xna.Framework.Graphics
             SamplerStates.PlatformSetSamplers(this);
         }
 
-        private SharpDX.Direct3D11.InputLayout GetInputLayout(Shader shader, VertexDeclaration decl)
+        private SharpDX.Direct3D11.InputLayout GetInputLayout()
         {
             SharpDX.Direct3D11.InputLayout layout;
 
-            // Lookup the layout using the shader and declaration as the key.
-            var key = (ulong)decl.HashKey << 32 | (uint)shader.HashKey;           
+            // Create combined hash of all vertex declarations and the shader
+            var key = (ulong)_vertexShader.HashKey;
+            int shift = 32;
+            for (int i = 0; i < _currentVertexBufferBindingCount; ++i)
+            {
+                key ^= (ulong)_vertexBufferBindings[i].VertexBuffer.VertexDeclaration.HashKey << shift;
+                shift = 32 - shift;
+            }
+
             if (!_inputLayouts.TryGetValue(key, out layout))
             {
-                layout = new SharpDX.Direct3D11.InputLayout(_d3dDevice, shader.Bytecode, decl.GetInputLayout());
+                var inputElements = new List<SharpDX.Direct3D11.InputElement>();
+                for (int vertexDeclIndex = 0; vertexDeclIndex < _currentVertexBufferBindingCount; ++vertexDeclIndex)
+                {
+                    if (_vertexBufferBindings[vertexDeclIndex].VertexBuffer != null)
+                    {
+                        int firstElementOffset = inputElements.Count;
+                        inputElements.AddRange(_vertexBufferBindings[vertexDeclIndex].VertexBuffer.VertexDeclaration.GetInputLayout());
+                        // set correct vertex buffer slot in the InputElements for that vertex buffer.
+                        for (int inputElement = firstElementOffset; inputElement < inputElements.Count; ++inputElement)
+                        {
+                            SharpDX.Direct3D11.InputElement element = inputElements[inputElement];
+                            element.Slot = vertexDeclIndex;
+                            inputElements[inputElement] = element;
+                        }
+                    }
+                }
+                layout = new SharpDX.Direct3D11.InputLayout(_d3dDevice, _vertexShader.Bytecode, inputElements.ToArray());
                 _inputLayouts.Add(key, layout);
             }
 
