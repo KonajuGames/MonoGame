@@ -20,7 +20,7 @@ namespace Microsoft.Xna.Framework.Graphics
         {
             get
             {
-                if (_vertexShader == null)
+                if (_vertexShader == null && Stage == ShaderStage.Vertex && _shaderBytecode != null)
                     CreateVertexShader();
                 return _vertexShader;
             }
@@ -30,7 +30,7 @@ namespace Microsoft.Xna.Framework.Graphics
         {
             get
             {
-                if (_pixelShader == null)
+                if (_pixelShader == null && Stage == ShaderStage.Pixel && _shaderBytecode != null)
                     CreatePixelShader();
                 return _pixelShader;
             }
