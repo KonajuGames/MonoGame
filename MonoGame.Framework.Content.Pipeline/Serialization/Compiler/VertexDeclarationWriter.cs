@@ -3,6 +3,7 @@
 // file 'LICENSE.txt', which is part of this source code package.
 
 using Microsoft.Xna.Framework.Content.Pipeline.Processors;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler
 {
@@ -11,9 +12,9 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Serialization.Compiler
     {
         protected internal override void Write(ContentWriter output, VertexDeclarationContent value)
         {
-            // If fpr whatever reason there isn't a vertex stride defined, it's going to
-            // cause problems after reading it in, so better to fail early here.
-            output.Write((uint)value.VertexStride.Value);
+            // If the vertex stride is not defined, calculate it from the vertex elements
+            var stride = value.GetStride();
+            output.Write(stride);
             output.Write((uint)value.VertexElements.Count);
             foreach (var element in value.VertexElements)
             {

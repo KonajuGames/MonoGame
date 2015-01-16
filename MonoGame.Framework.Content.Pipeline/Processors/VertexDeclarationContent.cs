@@ -39,5 +39,21 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Processors
         {
             vertexElements = new Collection<VertexElement>();
         }
+
+        /// <summary>
+        /// Get the stride. Calculates it from the elements if no stride was specified.
+        /// </summary>
+        /// <returns>The stride in bytes, calculated if required.</returns>
+        internal uint GetStride()
+        {
+            if (!vertexStride.HasValue)
+            {
+                uint stride = 0;
+                foreach (var element in vertexElements)
+                    stride += (uint)element.VertexElementFormat.GetSize();
+                return stride;
+            }
+            return (uint)vertexStride.Value;
+        }
     }
 }
