@@ -290,7 +290,8 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
 
         private void Read(string filename)
         {
-            using (var fs = new FileStream(filename, FileMode.Open))
+            // Use FileAccess.Read to allow reading of read-only files (typically under source control such as Perforce)
+            using (var fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
             {
                 var data = new byte[fs.Length];
                 fs.Read(data, 0, data.Length);
