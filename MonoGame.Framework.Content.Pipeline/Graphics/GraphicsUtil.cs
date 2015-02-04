@@ -347,9 +347,9 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Graphics
             outputOptions.SetOutputHeader(false);
 
             var outputFormat = Format.DXT1;
-            if (containsFracAlpha)
+            if (containsAlpha)
             {
-                if (sharpAlpha)
+                if (sharpAlpha || !containsFracAlpha)
                     outputFormat = Format.DXT3;
                 else
                     outputFormat = Format.DXT5;
