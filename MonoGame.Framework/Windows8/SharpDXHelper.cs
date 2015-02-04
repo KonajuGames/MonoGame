@@ -109,19 +109,19 @@ namespace Microsoft.Xna.Framework
             }
         }
 
-        static public SharpDX.Vector2 ToVector2(this Vector2 vec)
+        static public SharpDX.Mathematics.Interop.RawVector2 ToVector2(this Vector2 vec)
         {
-            return new SharpDX.Vector2(vec.X, vec.Y);
+            return new SharpDX.Mathematics.Interop.RawVector2() { X = vec.X, Y = vec.Y };
         }
 
-        static public SharpDX.Vector3 ToVector3(this Vector3 vec)
+        static public SharpDX.Mathematics.Interop.RawVector3 ToVector3(this Vector3 vec)
         {
-            return new SharpDX.Vector3(vec.X, vec.Y, vec.Z);
+            return new SharpDX.Mathematics.Interop.RawVector3() { X = vec.X, Y = vec.Y, Z = vec.Z };
         }
 
-        static public SharpDX.Vector4 ToVector4(this Vector4 vec)
+        static public SharpDX.Mathematics.Interop.RawVector4 ToVector4(this Vector4 vec)
         {
-            return new SharpDX.Vector4(vec.X, vec.Y, vec.Z, vec.W);
+            return new SharpDX.Mathematics.Interop.RawVector4() { X = vec.X, Y = vec.Y, Z = vec.Z, W = vec.W };
         }
 
         static public SharpDX.X3DAudio.Emitter ToEmitter(this Audio.AudioEmitter emitter)
@@ -153,10 +153,10 @@ namespace Microsoft.Xna.Framework
 
             return new SharpDX.X3DAudio.Emitter()
             {
-                Position = new SharpDX.Vector3( pos.X, pos.Y, pos.Z ),
-                Velocity = new SharpDX.Vector3( vel.X, vel.Y, vel.Z ),
-                OrientFront = new SharpDX.Vector3( forward.X, forward.Y, forward.Z ),
-                OrientTop = new SharpDX.Vector3( up.X, up.Y, up.Z ),
+                Position = pos.ToVector3(),
+                Velocity = vel.ToVector3(),
+                OrientFront = forward.ToVector3(),
+                OrientTop = up.ToVector3(),
                 DopplerScaler = emitter.DopplerScale,                   
             };
         }
@@ -190,10 +190,10 @@ namespace Microsoft.Xna.Framework
 
             return new SharpDX.X3DAudio.Listener()
             {
-                Position = new SharpDX.Vector3(pos.X, pos.Y, pos.Z),
-                Velocity = new SharpDX.Vector3(vel.X, vel.Y, vel.Z),
-                OrientFront = new SharpDX.Vector3(forward.X, forward.Y, forward.Z),
-                OrientTop = new SharpDX.Vector3(up.X, up.Y, up.Z),                
+                Position = pos.ToVector3(),
+                Velocity = vel.ToVector3(),
+                OrientFront = forward.ToVector3(),
+                OrientTop = up.ToVector3(),
             };
         }
     }

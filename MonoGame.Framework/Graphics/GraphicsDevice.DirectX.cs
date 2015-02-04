@@ -793,7 +793,7 @@ namespace Microsoft.Xna.Framework.Graphics
                     foreach (var view in _currentRenderTargets)
                     {
                         if (view != null)
-                            _d3dContext.ClearRenderTargetView(view, new Color4(color.X, color.Y, color.Z, color.W));
+                            _d3dContext.ClearRenderTargetView(view, new SharpDX.Mathematics.Interop.RawColor4(color.X, color.Y, color.Z, color.W));
                     }
                 }
 
@@ -919,7 +919,7 @@ namespace Microsoft.Xna.Framework.Graphics
         {
             if (_d3dContext != null)
             {
-                var viewport = new SharpDX.ViewportF(_viewport.X, _viewport.Y, (float)_viewport.Width, (float)_viewport.Height, _viewport.MinDepth, _viewport.MaxDepth);
+                var viewport = new SharpDX.Mathematics.Interop.RawViewportF() { X = _viewport.X, Y = _viewport.Y, Width = (float)_viewport.Width, Height = (float)_viewport.Height, MinDepth = _viewport.MinDepth, MaxDepth = _viewport.MaxDepth };
                 lock (_d3dContext)
                     _d3dContext.Rasterizer.SetViewport(viewport);
             }

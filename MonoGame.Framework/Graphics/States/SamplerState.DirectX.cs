@@ -38,7 +38,7 @@ namespace Microsoft.Xna.Framework.Graphics
 
                 // TODO: How do i do these?
                 desc.MinimumLod = 0.0f;
-                desc.BorderColor = new SharpDX.Color4(0, 0, 0, 0);
+                desc.BorderColor = new SharpDX.Mathematics.Interop.RawColor4(0, 0, 0, 0);
 
                 // To support feature level 9.1 these must 
                 // be set to these exact values.

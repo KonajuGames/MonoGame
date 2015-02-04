@@ -26,13 +26,10 @@ namespace Microsoft.Xna.Framework.Media
 
             SharpDX.MediaFoundation.MediaSource mediaSource;
             {
-                SourceResolver resolver;
-                MediaFactory.CreateSourceResolver(out resolver);
+                SourceResolver resolver = new SourceResolver();
 
                 ObjectType otype;
-                ComObject source;
-                resolver.CreateObjectFromURL(FilePath, (int)SourceResolverFlags.MediaSource, null, out otype,
-                                                out source);
+                ComObject source = resolver.CreateObjectFromURL(FilePath, SourceResolverFlags.MediaSource, null, out otype);
                 mediaSource = source.QueryInterface<SharpDX.MediaFoundation.MediaSource>();
                 resolver.Dispose();
                 source.Dispose();
@@ -43,7 +40,7 @@ namespace Microsoft.Xna.Framework.Media
 
             for (var i = 0; i < presDesc.StreamDescriptorCount; i++)
             {
-                Bool selected;
+                SharpDX.Mathematics.Interop.RawBool selected;
                 StreamDescriptor desc;
                 presDesc.GetStreamDescriptorByIndex(i, out selected, out desc);
 
