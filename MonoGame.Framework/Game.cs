@@ -527,8 +527,9 @@ namespace Microsoft.Xna.Framework
 
         protected virtual void Initialize()
         {
-            // TODO: We shouldn't need to do this here.
-            applyChanges(graphicsDeviceManager);
+            // Initialize the platform, including creating the GraphicsDevice object
+            if (Platform != null)
+                Platform.Initialize();
 
             // According to the information given on MSDN (see link below), all
             // GameComponents in Components at the time Initialize() is called
