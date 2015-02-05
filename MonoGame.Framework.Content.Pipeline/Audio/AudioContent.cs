@@ -172,6 +172,7 @@ namespace Microsoft.Xna.Framework.Content.Pipeline.Audio
                         break;
                     case ConversionFormat.Aac:
                         // AAC (Advanced Audio Coding)
+                        // Requires -strict experimental
                         ffmpegCodecName = "aac";
                         ffmpegMuxerName = "ipod";
                         format = 0x0000; /* WAVE_FORMAT_UNKNOWN */

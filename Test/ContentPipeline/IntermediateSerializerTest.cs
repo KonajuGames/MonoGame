@@ -191,7 +191,14 @@ namespace MonoGame.Tests.ContentPipeline
             {
                 StringArray = new[] { "Hello", "World" },
                 StringList = new List<string> { "This", "is", "a", "test" },
-                IntArray = new[] { 1, 2, 3, 23, 42 }
+                IntArray = new[] { 1, 2, 3, 23, 42 },
+                ColorArray = new[]
+                {
+                    new Color(0x88, 0x65, 0x42, 0xFF),
+                    new Color(0x91, 0x6B, 0x46, 0xFF),
+                    new Color(0x91, 0x7B, 0x46, 0xFF),
+                    new Color(0x88, 0x65, 0x43, 0xFF)
+                }
             });
         }
 
@@ -230,7 +237,8 @@ namespace MonoGame.Tests.ContentPipeline
                 Plane = new Plane(1, 2, 3, 4),
                 Matrix = new Matrix(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16),
                 Color = new Color{ A = 0xFF, R = 0x64, G = 0x95, B = 0xED },
-                Vector2Array = new []{ new Vector2(0, 0), new Vector2(1, 1) }
+                Vector2Array = new []{ new Vector2(0, 0), new Vector2(1, 1) },
+                Vector2List = new List<Vector2>(new[] { new Vector2(1, 7), new Vector2(1, 9), new Vector2(1, 10) })
             });
         }
 
@@ -269,7 +277,8 @@ namespace MonoGame.Tests.ContentPipeline
                 D = new Nested.ContentPipeline.ClassInsideNestedAmbiguousNamespace { Value = true },
                 E = new Nested.ClassInsideNestedNamespace { Value = true },
                 F = new Nested.ContentPipeline2.ClassInsideNestedUnambiguousNamespace { Value = true },
-                G = new SomethingElse.ContentPipeline.ClassInsideAmbiguousNamespace { Value = true }
+                G = new SomethingElse.ContentPipeline.ClassInsideAmbiguousNamespace { Value = true },
+                H = null
             });
         }
 

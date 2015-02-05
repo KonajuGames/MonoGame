@@ -222,6 +222,13 @@ namespace MonoGame.Tests.ContentPipeline
                 Assert.AreEqual(3, collections.IntArray[2]);
                 Assert.AreEqual(23, collections.IntArray[3]);
                 Assert.AreEqual(42, collections.IntArray[4]);
+
+                Assert.NotNull(collections.ColorArray);
+                Assert.AreEqual(4, collections.ColorArray.Length);
+                Assert.AreEqual(new Color(0x88, 0x65, 0x42, 0xFF), collections.ColorArray[0]);
+                Assert.AreEqual(new Color(0x91, 0x6B, 0x46, 0xFF), collections.ColorArray[1]);
+                Assert.AreEqual(new Color(0x91, 0x7B, 0x46, 0xFF), collections.ColorArray[2]);
+                Assert.AreEqual(new Color(0x88, 0x65, 0x43, 0xFF), collections.ColorArray[3]);
             });            
         }
 
@@ -266,6 +273,10 @@ namespace MonoGame.Tests.ContentPipeline
                 Assert.AreEqual(2, mathTypes.Vector2Array.Length);
                 Assert.AreEqual(Vector2.Zero, mathTypes.Vector2Array[0]);
                 Assert.AreEqual(Vector2.One, mathTypes.Vector2Array[1]);
+                Assert.AreEqual(3, mathTypes.Vector2List.Count);
+                Assert.AreEqual(new Vector2(1, 7), mathTypes.Vector2List[0]);
+                Assert.AreEqual(new Vector2(1, 9), mathTypes.Vector2List[1]);
+                Assert.AreEqual(new Vector2(1, 10), mathTypes.Vector2List[2]);
             });
         }
 
@@ -316,6 +327,7 @@ namespace MonoGame.Tests.ContentPipeline
                 Assert.AreEqual(true, ((Nested.ContentPipeline2.ClassInsideNestedUnambiguousNamespace) namespaceClass.F).Value);
                 Assert.IsAssignableFrom<SomethingElse.ContentPipeline.ClassInsideAmbiguousNamespace>(namespaceClass.G);
                 Assert.AreEqual(true, ((SomethingElse.ContentPipeline.ClassInsideAmbiguousNamespace) namespaceClass.G).Value);
+                Assert.IsNull(namespaceClass.H);
             });
         }
 
@@ -443,16 +455,15 @@ namespace MonoGame.Tests.ContentPipeline
         }
 
         [Test]
-        public void QualifiedTypes()
+        public void CustomFormatting()
         {
-            DeserializeCompileAndLoad<QualifiedTypes>("21_QualifiedTypes.xml", theBasics =>
+            DeserializeCompileAndLoad<CustomFormatting>("21_CustomFormatting.xml", customFormatting =>
             {
-                Assert.AreEqual(1, theBasics.PublicField);
-                Assert.AreEqual(0, theBasics.InternalField);
-                Assert.AreEqual("Hello World", theBasics.GetSetProperty);
-                Assert.NotNull(theBasics.Nested);
-                Assert.AreEqual("Shawn", theBasics.Nested.Name);
-                Assert.AreEqual(true, theBasics.Nested.IsEnglish);
+                Assert.AreEqual(1, customFormatting.A);
+                Assert.AreEqual(3, customFormatting.Vector2ListSpaced.Count);
+                Assert.AreEqual(new Vector2(0, 4), customFormatting.Vector2ListSpaced[0]);
+                Assert.AreEqual(new Vector2(0, 6), customFormatting.Vector2ListSpaced[1]);
+                Assert.AreEqual(new Vector2(0, 7), customFormatting.Vector2ListSpaced[2]);
             });
         }
     }

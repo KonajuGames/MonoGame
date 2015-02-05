@@ -84,26 +84,31 @@
         <Platforms>iOS</Platforms>
     </Compile>
 
+    <Compile Include="Framework\Bounding.cs" />
     <Compile Include="Framework\ColorTest.cs" />
+	<Compile Include="Framework\CurveKeyCollectionTest.cs" />
+	<Compile Include="Framework\CurveKeyTest.cs" />
+	<Compile Include="Framework\CurveTest.cs" />
+    <Compile Include="Framework\GamePadStateTest.cs" />
+    <Compile Include="Framework\GameTest.cs" />	
+    <Compile Include="Framework\GameTest+Methods.cs" />
+    <Compile Include="Framework\GameTest+Properties.cs" />
     <Compile Include="Framework\GestureRecognizerTest.cs" />
+    <Compile Include="Framework\MathHelperTest.cs" />
     <Compile Include="Framework\MockWindow.cs" />
     <Compile Include="Framework\PackedVectorTest.cs" />
-    <Compile Include="Framework\TouchCollectionTest.cs" />
-    <Compile Include="Framework\TouchPanelTest.cs" />
-    <Compile Include="Framework\TouchLocationTest.cs" />
-    <Compile Include="Framework\Bounding.cs" />
-    <Compile Include="Framework\MathHelperTest.cs" />
     <Compile Include="Framework\PlaneTest.cs" />
     <Compile Include="Framework\RayTest.cs" />
 	<Compile Include="Framework\RectangleTest.cs" />
-    <Compile Include="Framework\GameTest+Methods.cs" />
-    <Compile Include="Framework\GameTest+Properties.cs" />
-    <Compile Include="Framework\GameTest.cs" />
     <Compile Include="Framework\TestGameBase.cs" />
-    <Compile Include="Framework\GamePadStateTest.cs" />
+    <Compile Include="Framework\TouchCollectionTest.cs" />
+    <Compile Include="Framework\TouchLocationTest.cs" />
+    <Compile Include="Framework\TouchPanelTest.cs" />
     <Compile Include="Framework\UtilitiesTest.cs" />
-	<Compile Include="Framework\Vector2Test.cs" />
-	
+    <Compile Include="Framework\Vector2Test.cs" />
+    <Compile Include="Framework\Vector3Test.cs" />
+    <Compile Include="Framework\Vector4Test.cs" />
+    
     <Compile Include="Framework\Components\DrawFrameNumberComponent.cs" />
     <Compile Include="Framework\Components\FlexibleGameComponent.cs" />
     <Compile Include="Framework\Components\FrameCompareComponent.cs" />
@@ -136,6 +141,9 @@
         <Platforms>Windows</Platforms>
     </Compile>
     <Compile Include="ContentPipeline\FontDescriptionTests.cs">
+        <Platforms>Windows,MacOS,Linux</Platforms>
+    </Compile>
+    <Compile Include="ContentPipeline\FontTextureProcessorTests.cs">
         <Platforms>Windows,MacOS,Linux</Platforms>
     </Compile>
     <Compile Include="ContentPipeline\IntermediateDeserializerTest.cs">
@@ -205,6 +213,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
 
+    <Content Include="Assets\Effects\DefinesTest.fx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Assets\Effects\ParserTest.fx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -530,7 +541,7 @@
     <Content Include="Assets\Xml\20_SystemTypes.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-	<Content Include="Assets\Xml\21_QualifiedTypes.xml">
+	<Content Include="Assets\Xml\21_CustomFormatting.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
 
