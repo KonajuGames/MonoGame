@@ -95,5 +95,10 @@ namespace Microsoft.Xna.Framework.Input
         {
             return (obj is GamePadTriggers) && (this == (GamePadTriggers)obj);
         }
+
+        public override int GetHashCode()
+        {
+            return left.GetHashCode() ^ right.GetHashCode();
+        }
 	}
 }

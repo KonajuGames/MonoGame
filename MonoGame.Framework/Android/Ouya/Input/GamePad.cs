@@ -41,7 +41,9 @@ purpose and non-infringement.
 using Android.Views;
 using System;
 using System.Diagnostics;
+#if OUYA
 using Ouya.Console.Api;
+#endif
 
 namespace Microsoft.Xna.Framework.Input
 {
@@ -66,7 +68,12 @@ namespace Microsoft.Xna.Framework.Input
 
         private readonly GamePadCapabilities _capabilities;
 
+#if OUYA
         private static readonly GamePad[] GamePads = new GamePad[OuyaController.MaxControllers];
+#else
+        private static readonly GamePad[] GamePads = new GamePad[1];
+#endif
+        static internal GamePad Get(int index) { return GamePads[index]; }
 
         [CLSCompliant(false)]
         protected GamePad(InputDevice device)
@@ -141,6 +148,11 @@ namespace Microsoft.Xna.Framework.Input
             }
 
             return state;
+        }
+
+        internal void SetBack()
+        {
+            _buttons |= Buttons.Back;
         }
 
         public static bool SetVibration(PlayerIndex playerIndex, float leftMotor, float rightMotor)

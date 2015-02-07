@@ -159,7 +159,7 @@ namespace Microsoft.Xna.Framework.Graphics
 		{
 			get
 			{
-#if OUYA
+#if ANDROID
                 float safeRatio = 0.1f;
                 float safeW = (float)width * safeRatio;
                 float safeH = (float)height * safeRatio;

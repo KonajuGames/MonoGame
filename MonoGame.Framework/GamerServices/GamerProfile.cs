@@ -64,7 +64,7 @@ namespace Microsoft.Xna.Framework.GamerServices
             GC.SuppressFinalize(this);
 		}
 
-        protected void Dispose(bool disposing)
+        void Dispose(bool disposing)
         {
         }
 

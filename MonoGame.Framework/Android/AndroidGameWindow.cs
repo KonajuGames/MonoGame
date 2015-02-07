@@ -102,9 +102,7 @@ namespace Microsoft.Xna.Framework
 
             _touchManager = new AndroidTouchEventManager(_game);
 
-#if OUYA
 	        GamePad.Initialize();
-#endif
         }
 		
 		protected override void OnLoad (EventArgs e)
@@ -115,17 +113,13 @@ namespace Microsoft.Xna.Framework
 
         public override bool OnKeyDown(Keycode keyCode, KeyEvent e)
         {
-#if OUYA
 			if (GamePad.OnKeyDown(keyCode, e))
 				return true;
-#endif
 
             Keyboard.KeyDown(keyCode);
             // we need to handle the Back key here because it doesnt work any other way
-#if !OUYA
             if (keyCode == Keycode.Back)
-                GamePad.Instance.SetBack();
-#endif
+                GamePad.Get(0).SetBack();
 
             if (keyCode == Keycode.VolumeUp)
             {
@@ -144,15 +138,12 @@ namespace Microsoft.Xna.Framework
 
         public override bool OnKeyUp(Keycode keyCode, KeyEvent e)
         {
-#if OUYA
 			if (GamePad.OnKeyUp(keyCode, e))
 				return true;
-#endif
 			Keyboard.KeyUp(keyCode);
             return true;
         }
 
-#if OUYA
 		public override bool OnGenericMotionEvent(MotionEvent e)
 		{
 			if (GamePad.OnGenericMotionEvent(e))
@@ -160,7 +151,6 @@ namespace Microsoft.Xna.Framework
 
 			return base.OnGenericMotionEvent(e);
 		}
-#endif
 
 		protected override void CreateFrameBuffer()
 		{

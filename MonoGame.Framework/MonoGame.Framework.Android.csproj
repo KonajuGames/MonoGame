@@ -17,13 +17,15 @@
     <MandroidI18n />
     <AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>
     <DeployExternal>False</DeployExternal>
+    <AndroidUseLatestPlatformSdk />
+    <TargetFrameworkVersion>v4.1</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>True</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>False</Optimize>
     <OutputPath>bin\Android\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;ANDROID;GLES;OPENGL;OPENAL;PAUSE_SOUND_ON_APP_SUSPEND</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;ANDROID;GLES;OPENGL;AUDIOTRACK;PAUSE_SOUND_ON_APP_SUSPEND;API_LEVEL_11_OR_HIGHER</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
@@ -34,7 +36,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>True</Optimize>
     <OutputPath>bin\Android\Release\</OutputPath>
-    <DefineConstants>TRACE;ANDROID;GLES;OPENGL;OPENAL;PAUSE_SOUND_ON_APP_SUSPEND</DefineConstants>
+    <DefineConstants>TRACE;ANDROID;GLES;OPENGL;AUDIOTRACK;PAUSE_SOUND_ON_APP_SUSPEND;API_LEVEL_11_OR_HIGHER</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AndroidUseSharedRuntime>False</AndroidUseSharedRuntime>
@@ -51,11 +53,8 @@
     <Reference Include="System.Runtime.Serialization" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Audio\DynamicSoundEffectInstance.cs" />
-    <Compile Include="Desktop\Audio\AudioLoader.cs" />
-    <Compile Include="Desktop\Audio\OALSoundBuffer.cs" />
-    <Compile Include="Desktop\Audio\OpenALSoundController.cs" />
-    <Compile Include="Desktop\Audio\SoundEffectInstance.cs" />
+    <Compile Include="Android\Ouya\Input\GamePad.cs" />
+    <Compile Include="Audio\SoundEffectInstance.cs" />
     <Compile Include="GamerServices\LeaderboardEntry.cs" />
     <Compile Include="GamerServices\LeaderboardIdentity.cs" />
     <Compile Include="GamerServices\LeaderboardKey.cs" />
@@ -77,6 +76,7 @@
     <Compile Include="Android\Input\Touch\AndroidTouchEventManager.cs" />
     <Compile Include="Android\OrientationListener.cs" />
     <Compile Include="Android\ScreenReciever.cs" />
+    <Compile Include="Media\VideoSoundtrackType.cs" />
     <Compile Include="TitleContainer.cs" />
     <Compile Include="Audio\AudioCategory.cs" />
     <Compile Include="Content\ContentManager.cs" />
@@ -166,7 +166,7 @@
     <Compile Include="Graphics\Effect\EffectTechnique.cs" />
     <Compile Include="Graphics\Effect\EffectTechniqueCollection.cs" />
     <Compile Include="Graphics\States\BlendState.cs" />
-	<Compile Include="Graphics\States\TargetBlendState.cs" />
+    <Compile Include="Graphics\States\TargetBlendState.cs" />
     <Compile Include="Graphics\States\BlendFunction.cs" />
     <Compile Include="Graphics\States\Blend.cs" />
     <Compile Include="Graphics\States\CompareFunction.cs" />
@@ -197,7 +197,6 @@
     <Compile Include="Graphics\Vertices\VertexPositionColorTexture.cs" />
     <Compile Include="Graphics\Vertices\VertexPositionNormalTexture.cs" />
     <Compile Include="Graphics\Vertices\VertexPositionTexture.cs" />
-    <Compile Include="Android\Input\GamePad.cs" />
     <Compile Include="Android\Media\Video.cs" />
     <Compile Include="Android\Media\VideoPlayer.cs" />
     <Compile Include="Audio\AudioEmitter.cs" />
