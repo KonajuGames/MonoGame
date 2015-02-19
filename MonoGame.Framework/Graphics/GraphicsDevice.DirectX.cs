@@ -832,6 +832,7 @@ namespace Microsoft.Xna.Framework.Graphics
             ClearLayouts();
             SharpDX.Utilities.Dispose(ref _renderTargetView);
             SharpDX.Utilities.Dispose(ref _depthStencilView);
+            SharpDX.Utilities.Dispose(ref _swapChain);
             SharpDX.Utilities.Dispose(ref _d3dDevice);
             SharpDX.Utilities.Dispose(ref _d3dContext);
 
