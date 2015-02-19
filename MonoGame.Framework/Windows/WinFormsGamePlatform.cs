@@ -136,7 +136,8 @@ namespace MonoGame.Framework
 
         public override void RunLoop()
         {
-            _window.RunLoop();
+            if (_window != null)
+                _window.RunLoop();
         }
 
         public override void StartRunLoop()
@@ -146,7 +147,8 @@ namespace MonoGame.Framework
         
         public override void Exit()
         {
-            _window.Dispose();
+            if (_window != null)
+                _window.Dispose();
             _window = null;
             Window = null;
         }

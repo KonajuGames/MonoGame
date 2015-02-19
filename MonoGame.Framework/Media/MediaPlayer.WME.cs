@@ -31,6 +31,11 @@ namespace Microsoft.Xna.Framework.Media
             _dispatcher = CoreWindow.GetForCurrentThread().Dispatcher;
         }
 
+        private static void PlatformDeinitialize()
+        {
+
+        }
+
         private static void MediaEngineExOnPlaybackEvent(MediaEngineEvent mediaEvent, long param1, int param2)
         {
             if (mediaEvent != MediaEngineEvent.Ended)

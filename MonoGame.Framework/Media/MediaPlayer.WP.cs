@@ -54,6 +54,11 @@ namespace Microsoft.Xna.Framework.Media
                 };
         }
 
+        private static void PlatformDeinitialize()
+        {
+
+        }
+
         private static void MediaElement_MediaOpened(object sender, RoutedEventArgs e)
         {
             if (elapsedTime != TimeSpan.Zero)

@@ -21,6 +21,11 @@ namespace Microsoft.Xna.Framework.Media
 
         }
 
+        private static void PlatformDeinitialize()
+        {
+
+        }
+
         private static bool PlatformGetIsMuted()
         {
             return _isMuted;

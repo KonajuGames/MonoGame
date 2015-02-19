@@ -48,6 +48,11 @@ namespace Microsoft.Xna.Framework.Media
             MediaFactory.CreateMediaSession(null, out _session);
         }
 
+        private static void PlatformDeinitialize()
+        {
+
+        }
+
         #region Properties
 
         private static bool PlatformGetIsMuted()

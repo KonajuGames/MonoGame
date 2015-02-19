@@ -34,6 +34,7 @@ namespace Microsoft.Xna.Framework.Media
             if(started)
             {
                 started = false;
+                MediaPlayer.Deinitialize();
                 MediaManager.Shutdown();
             }
         }

@@ -850,7 +850,7 @@
     <Compile Include="Media\MediaPlayer.WME.cs">
       <Platforms>Windows8,WindowsPhone81</Platforms>
     </Compile>
-    <Compile Include="Media\MediaPlayer.WMS.cs">
+    <Compile Include="Media\MediaPlayer.XAudio.cs">
       <Platforms>Windows</Platforms>
     </Compile>
     <Compile Include="Media\MediaPlayer.WP.cs">
@@ -889,7 +889,7 @@
     <Compile Include="Media\Song.Tao.SDL.cs">
         <Platforms>Linux</Platforms>
     </Compile>
-    <Compile Include="Media\Song.WMS.cs">
+    <Compile Include="Media\Song.XAudio.cs">
         <Platforms>Windows</Platforms>
     </Compile>
     <Compile Include="Media\Song.WP.cs">

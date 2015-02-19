@@ -31,6 +31,11 @@ namespace Microsoft.Xna.Framework.Media
             PlatformInitialize();
         }
 
+        internal static void Deinitialize()
+        {
+            PlatformDeinitialize();
+        }
+
         #region Properties
 
         public static MediaQueue Queue { get { return _queue; } }
