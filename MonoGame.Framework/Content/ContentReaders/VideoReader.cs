@@ -67,12 +67,13 @@ namespace Microsoft.Xna.Framework.Content
             path = Path.Combine(input.ContentManager.RootDirectory, path);
             path = TitleContainer.GetFilename(path);
 
-            /*int durationMS =*/ input.ReadObject<int>();
-            /*int width =*/ input.ReadObject<int>();
-            /*int height =*/ input.ReadObject<int>();
-            /*float framesPerSecond =*/ input.ReadObject<Single>();
-            /*int soundTrackType =*/ input.ReadObject<int>();   // 0 = Music, 1 = Dialog, 2 = Music and dialog
-            return new Video(path);
+            var video = new Video(path);
+            video.Duration = TimeSpan.FromMilliseconds(input.ReadObject<int>());
+            video.Width = input.ReadObject<int>();
+            video.Height = input.ReadObject<int>();
+            video.FramesPerSecond = input.ReadObject<float>();
+            video.VideoSoundtrackType = (VideoSoundtrackType)input.ReadObject<int>();   // 0 = Music, 1 = Dialog, 2 = Music and dialog
+            return video;
         }
     }
 }

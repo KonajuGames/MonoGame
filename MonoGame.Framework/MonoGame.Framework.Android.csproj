@@ -447,15 +447,4 @@
       <Name>Lidgren.Network.Android</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <EmbeddedNativeLibrary Include="..\ThirdParty\Libs\openal-soft\libs\armeabi-v7a\libopenal32.so">
-      <Link>lib\armeabi-v7a\libopenal32.so</Link>
-    </EmbeddedNativeLibrary>
-    <EmbeddedNativeLibrary Include="..\ThirdParty\Libs\openal-soft\libs\armeabi\libopenal32.so">
-      <Link>lib\armeabi\libopenal32.so</Link>
-    </EmbeddedNativeLibrary>
-    <EmbeddedNativeLibrary Include="..\ThirdParty\Libs\openal-soft\libs\x86\libopenal32.so">
-      <Link>lib\x86\libopenal32.so</Link>
-    </EmbeddedNativeLibrary>
-  </ItemGroup>
 </Project>

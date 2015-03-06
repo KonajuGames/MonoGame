@@ -71,7 +71,7 @@ namespace Microsoft.Xna.Framework.Input
 #if OUYA
         private static readonly GamePad[] GamePads = new GamePad[OuyaController.MaxControllers];
 #else
-        private static readonly GamePad[] GamePads = new GamePad[1];
+        private static readonly GamePad[] GamePads = new GamePad[4];
 #endif
         static internal GamePad Get(int index) { return GamePads[index]; }
 
@@ -262,7 +262,7 @@ namespace Microsoft.Xna.Framework.Input
             if (e.Action != MotionEventActions.Move)
                 return false;
 
-            if (gamePad._capabilities.GamePadType == GamePadType.GamePad)
+            if (gamePad._capabilities.GamePadType == GamePadType.GamePad || gamePad._capabilities.GamePadType == GamePadType.Shield)
             {
                 // Dpad press/release is done through the hat axes for a Xbox 360 controller
                 float x = e.GetAxisValue(Axis.HatX);
@@ -480,6 +480,33 @@ namespace Microsoft.Xna.Framework.Input
 
                 case "PS3":
                     capabilities.GamePadType = GamePadType.PS3GamePad;
+
+                    capabilities.HasAButton = true;
+                    capabilities.HasBButton = true;
+                    capabilities.HasXButton = true;
+                    capabilities.HasYButton = true;
+
+                    capabilities.HasLeftXThumbStick = true;
+                    capabilities.HasLeftYThumbStick = true;
+                    capabilities.HasRightXThumbStick = true;
+                    capabilities.HasRightYThumbStick = true;
+
+                    capabilities.HasLeftShoulderButton = true;
+                    capabilities.HasRightShoulderButton = true;
+                    capabilities.HasLeftTrigger = true;
+                    capabilities.HasRightTrigger = true;
+
+                    capabilities.HasDPadDownButton = true;
+                    capabilities.HasDPadLeftButton = true;
+                    capabilities.HasDPadRightButton = true;
+                    capabilities.HasDPadUpButton = true;
+
+                    capabilities.HasStartButton = true;
+                    capabilities.HasBackButton = true;
+                    break;
+
+                case "NVIDIA Corporation NVIDIA Controller v01.01":
+                    capabilities.GamePadType = GamePadType.Shield;
 
                     capabilities.HasAButton = true;
                     capabilities.HasBButton = true;

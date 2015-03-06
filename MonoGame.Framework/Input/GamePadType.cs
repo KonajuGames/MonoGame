@@ -106,6 +106,11 @@ namespace Microsoft.Xna.Framework.Input
         MogaProGamePad,
 
         /// <summary>
+        /// NVIDIA SHIELD controller,
+        /// </summary>
+        Shield,
+
+        /// <summary>
         /// Big Button controller
         /// </summary>
         BigButtonPad = 768,
