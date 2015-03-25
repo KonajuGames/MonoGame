@@ -152,7 +152,14 @@ namespace Microsoft.Xna.Framework.Input
 
         internal void SetBack()
         {
+            Android.Util.Log.Debug("FP", "SetBack() was " + ((_buttons & Buttons.Back) != 0 ? "set" : "not set"));
             _buttons |= Buttons.Back;
+        }
+
+        internal void ClearBack()
+        {
+            Android.Util.Log.Debug("FP", "ClearBack() was " + ((_buttons & Buttons.Back) != 0 ? "set" : "not set"));
+            _buttons &= ~Buttons.Back;
         }
 
         public static bool SetVibration(PlayerIndex playerIndex, float leftMotor, float rightMotor)
@@ -425,9 +432,8 @@ namespace Microsoft.Xna.Framework.Input
             capabilities.GamePadType = GamePadType.GamePad;
             capabilities.HasLeftVibrationMotor = capabilities.HasRightVibrationMotor = device.Vibrator.HasVibrator;
 
-            switch (device.Name)
+            if (device.Name.Contains("OUYA Game Controller"))
             {
-                case "OUYA Game Controller":
                     capabilities.GamePadType = GamePadType.OuyaGamePad;
 
                     capabilities.HasAButton = true;
@@ -449,9 +455,9 @@ namespace Microsoft.Xna.Framework.Input
                     capabilities.HasDPadLeftButton = true;
                     capabilities.HasDPadRightButton = true;
                     capabilities.HasDPadUpButton = true;
-                    break;
-
-                case "Microsoft X-Box 360 pad":
+            }
+            else if (device.Name.Contains("Microsoft X-Box 360 pad"))
+            {
                     capabilities.GamePadType = GamePadType.GamePad;
 
                     capabilities.HasAButton = true;
@@ -476,9 +482,9 @@ namespace Microsoft.Xna.Framework.Input
 
                     capabilities.HasStartButton = true;
                     capabilities.HasBackButton = true;
-                    break;
-
-                case "PS3":
+            }
+            else if (device.Name.Contains("PS3"))
+            {
                     capabilities.GamePadType = GamePadType.PS3GamePad;
 
                     capabilities.HasAButton = true;
@@ -503,9 +509,9 @@ namespace Microsoft.Xna.Framework.Input
 
                     capabilities.HasStartButton = true;
                     capabilities.HasBackButton = true;
-                    break;
-
-                case "NVIDIA Corporation NVIDIA Controller v01.01":
+            }
+            else if (device.Name.Contains("NVIDIA Controller"))
+            {
                     capabilities.GamePadType = GamePadType.Shield;
 
                     capabilities.HasAButton = true;
@@ -530,7 +536,6 @@ namespace Microsoft.Xna.Framework.Input
 
                     capabilities.HasStartButton = true;
                     capabilities.HasBackButton = true;
-                    break;
             }
             return capabilities;
         }

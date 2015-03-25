@@ -141,6 +141,10 @@ namespace Microsoft.Xna.Framework
 			if (GamePad.OnKeyUp(keyCode, e))
 				return true;
 			Keyboard.KeyUp(keyCode);
+            // we need to handle the Back key here because it doesnt work any other way
+            if (keyCode == Keycode.Back)
+                GamePad.Get(0).ClearBack();
+
             return true;
         }
 
