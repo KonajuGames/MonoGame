@@ -152,13 +152,11 @@ namespace Microsoft.Xna.Framework.Input
 
         internal void SetBack()
         {
-            Android.Util.Log.Debug("FP", "SetBack() was " + ((_buttons & Buttons.Back) != 0 ? "set" : "not set"));
             _buttons |= Buttons.Back;
         }
 
         internal void ClearBack()
         {
-            Android.Util.Log.Debug("FP", "ClearBack() was " + ((_buttons & Buttons.Back) != 0 ? "set" : "not set"));
             _buttons &= ~Buttons.Back;
         }
 
