@@ -84,8 +84,10 @@ namespace Microsoft.Xna.Framework.Content
 				// Get the local path and skip the first character (the path separator)
 				path = dst.LocalPath.Substring(1);
 				
+#if !ANDROID
 				// Adds the ContentManager's RootDirectory
                 path = Path.Combine(input.ContentManager.RootDirectoryFullPath, path);
+#endif
 			}
 			
 			var durationMs = input.ReadObject<int>();

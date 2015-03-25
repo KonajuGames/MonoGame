@@ -1,10 +1,14 @@
 using System;
 using System.IO;
+using Java.IO;
 ﻿
 namespace Microsoft.Xna.Framework.Media
 {
     public sealed class Song : IEquatable<Song>, IDisposable
     {
+        public delegate FileInputStream OnOpenStreamHandler(string fileName, out long offset, out long length);
+        static public OnOpenStreamHandler OnOpenStream;
+
         static Android.Media.MediaPlayer _androidPlayer;
         static Song _playingSong;
 
@@ -12,6 +16,7 @@ namespace Microsoft.Xna.Framework.Media
         private readonly TimeSpan _duration = TimeSpan.Zero;
         private int _playCount;
         private bool _disposed;
+        FileInputStream _stream;
 
         internal delegate void FinishedPlayingHandler(object sender, EventArgs args);
         event FinishedPlayingHandler DonePlaying;
@@ -21,6 +26,7 @@ namespace Microsoft.Xna.Framework.Media
         {
             _duration = TimeSpan.FromMilliseconds(durationMS);
         }
+
         internal Song(string fileName)
         {
             _name = fileName;
@@ -46,19 +52,24 @@ namespace Microsoft.Xna.Framework.Media
         {
             if (!_disposed)
             {
-                // ...
-
+                if (disposing)
+                {
+                    if (_stream != null)
+                        _stream.Dispose();
+                    _stream = null;
+                }
                 _disposed = true;
             }
         }
 
         private void Prepare()
         {
-            var afd = Game.Activity.Assets.OpenFd(_name);
-            if (afd != null)
+            long offset, length;
+            _stream = OnOpenStream(_name, out offset, out length);
+            if (_stream != null)
             {
                 _androidPlayer.Reset();
-                _androidPlayer.SetDataSource(afd.FileDescriptor, afd.StartOffset, afd.Length);
+                _androidPlayer.SetDataSource(_stream.FD, offset, length);
                 _androidPlayer.Prepare();
                 _androidPlayer.Looping = MediaPlayer.IsRepeating;
                 _playingSong = this;
