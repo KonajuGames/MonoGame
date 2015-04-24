@@ -3,8 +3,8 @@
 // file 'LICENSE.txt', which is part of this source code package.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
-
 using SharpDX;
 using SharpDX.XAudio2;
 using SharpDX.Multimedia;
@@ -22,6 +22,19 @@ namespace Microsoft.Xna.Framework.Audio
         private static X3DAudio _device3D;
         private static bool _device3DDirty = true;
         private static Speakers _speakers = Speakers.Stereo;
+        private static List<DynamicSoundEffectInstance> _dynamicInstances = new List<DynamicSoundEffectInstance>();
+
+        internal static void AddDynamicSoundEffectInstance(DynamicSoundEffectInstance instance)
+        {
+            if (!_dynamicInstances.Contains(instance))
+                _dynamicInstances.Add(instance);
+        }
+
+        internal static void RemoveDynamicSoundEffectInstance(DynamicSoundEffectInstance instance)
+        {
+            if (_dynamicInstances.Contains(instance))
+                _dynamicInstances.Remove(instance);
+        }
 
         // XNA does not expose this, but it exists in X3DAudio.
         [CLSCompliant(false)]
@@ -198,12 +211,15 @@ namespace Microsoft.Xna.Framework.Audio
             {
                 if (_dataStream != null)
                     _dataStream.Dispose();
+                _dataStream = null;
             }
-            _dataStream = null;
         }
 
         internal static void PlatformShutdown()
         {
+            while (_dynamicInstances.Count > 0)
+                _dynamicInstances[0].Dispose();
+
             if (MasterVoice != null)
             {
                 MasterVoice.DestroyVoice();
@@ -223,4 +239,3 @@ namespace Microsoft.Xna.Framework.Audio
         }
     }
 }
-

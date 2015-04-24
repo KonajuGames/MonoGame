@@ -301,6 +301,12 @@
     </Compile>
     <Compile Include="Audio\SoundEffectInstancePool.cs" />
     <Compile Include="Audio\SoundState.cs" />
+    <Compile Include="Audio\DynamicSoundEffectInstance.cs">
+      <Services>XAudioAudio</Services>
+    </Compile>
+    <Compile Include="Audio\DynamicSoundEffectInstance.XAudio.cs">
+      <Services>XAudioAudio</Services>
+    </Compile>
 
 
     <!-- Microsoft.Xna.Framework.Audio Xact-->

@@ -17,6 +17,7 @@ namespace Microsoft.Xna.Framework.Audio
 
         private bool _paused;
         private bool _loop;
+        int _channels;
 
         private void PlatformInitialize(byte[] buffer, int sampleRate, int channels)
         {
@@ -33,14 +34,14 @@ namespace Microsoft.Xna.Framework.Audio
             var e = emitter.ToEmitter();
             e.CurveDistanceScaler = SoundEffect.DistanceScale;
             e.DopplerScaler = SoundEffect.DopplerScale;
-            e.ChannelCount = _effect._format.Channels;
+            e.ChannelCount = _channels;
 
             // Convert from XNA Listener to a SharpDX Listener
             var l = listener.ToListener();
 
             // Number of channels in the sound being played.
             // Not actually sure if XNA supported 3D attenuation of sterio sounds, but X3DAudio does.
-            var srcChannelCount = _effect._format.Channels;
+            var srcChannelCount = _channels;
 
             // Number of output channels.
             var dstChannelCount = SoundEffect.MasterVoice.VoiceDetails.InputChannelCount;
@@ -66,6 +67,7 @@ namespace Microsoft.Xna.Framework.Audio
         {
             if (_voice != null)
             {
+                _channels = _effect._format.Channels;
                 // Choose the correct buffer depending on if we are looped.            
                 var buffer = _loop ? _effect._loopedBuffer : _effect._buffer;
 
@@ -241,7 +243,7 @@ namespace Microsoft.Xna.Framework.Audio
             if (_paused)
                 return SoundState.Paused;
 
-            return SoundState.Playing;
+            return _voice.State.SamplesPlayed > 0 ? SoundState.Playing : SoundState.Stopped;
         }
 
         private void PlatformSetVolume(float value)

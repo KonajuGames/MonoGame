@@ -20,9 +20,9 @@ namespace Microsoft.Xna.Framework.Audio
         private float _volume;
         private float _pitch;
 
-        /// <summary>Enables or Disables whether the SoundEffectInstance should repeat after playback.</summary>
+        /// <summary>Enables or disables whether the SoundEffectInstance should repeat after playback.</summary>
         /// <remarks>This value has no effect on an already playing sound.</remarks>
-        public bool IsLooped
+        public virtual bool IsLooped
         { 
             get { return PlatformGetIsLooped(); }
             set { PlatformSetIsLooped(value); }
@@ -136,7 +136,7 @@ namespace Microsoft.Xna.Framework.Audio
 
         /// <summary>Plays or resumes a SoundEffectInstance.</summary>
         /// <remarks>Throws an exception if more sounds are playing than the platform allows.</remarks>
-        public void Play()
+        public virtual void Play()
         {
             if (State == SoundState.Playing)
                 return;
@@ -200,6 +200,11 @@ namespace Microsoft.Xna.Framework.Audio
         {
             if (!_isDisposed)
             {
+                if (disposing)
+                {
+                    if (State != SoundState.Stopped)
+                        Stop();
+                }
                 PlatformDispose(disposing);
                 _isDisposed = true;
             }
