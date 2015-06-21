@@ -525,6 +525,7 @@ namespace Microsoft.Xna.Framework
 
             if (_game.GraphicsDevice != null)
                 _game.graphicsDeviceManager.ResetClientBounds(width, height);
+            Microsoft.Xna.Framework.Content.ContentManager.ReloadGraphicsContent();
         }
 
         void ISurfaceHolderCallback.SurfaceDestroyed(ISurfaceHolder holder)
