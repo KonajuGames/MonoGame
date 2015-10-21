@@ -92,7 +92,7 @@ namespace Microsoft.Xna.Framework.Audio
         {
             _pan = 0.0f;
             _volume = 1.0f;
-            _pitch = 0.0f;            
+            _pitch = 0.0f;
         }
 
         internal SoundEffectInstance(byte[] buffer, int sampleRate, int channels)

@@ -42,11 +42,11 @@
     <PlatformSpecificOutputFolder>True</PlatformSpecificOutputFolder>
 
     <CustomDefinitions>
-      <Platform Name="Android">TRACE;ANDROID;GLES;OPENGL;OPENAL</Platform>
+      <Platform Name="Android">TRACE;ANDROID;GLES;OPENGL</Platform>
       <Platform Name="iOS">IOS;GLES;OPENGL;OPENAL</Platform>
       <Platform Name="Linux">TRACE;LINUX;OPENGL;OPENAL;DESKTOPGL</Platform>
       <Platform Name="MacOS">MONOMAC;OPENGL;OPENAL</Platform>
-      <Platform Name="Ouya">TRACE;ANDROID;GLES;OPENGL;OUYA;OPENAL</Platform>
+      <Platform Name="Ouya">TRACE;ANDROID;GLES;OPENGL;OUYA</Platform>
       <Platform Name="WindowsGL">TRACE;WINDOWS;DESKTOPGL</Platform>
       <Platform Name="Windows">TRACE;WINDOWS;DIRECTX;WINDOWS_MEDIA_SESSION</Platform>
       <Platform Name="Windows8">TRACE;NETFX_CORE;WINRT;WINDOWS_STOREAPP;DIRECTX;DIRECTX11_1;WINDOWS_MEDIA_ENGINE</Platform>
@@ -77,6 +77,9 @@
     <Uses Name="_FrameworkDispatcherProvided">
       <Platforms>Windows,WindowsGL,MacOS</Platforms>
     </Uses>
+    <Uses Name="ManagedAudio">
+      <Platforms>Android,Ouya</Platforms>
+    </Uses>
     <Recommends Name="DirectXGraphics">
       <Platforms>Windows</Platforms>
     </Recommends>
@@ -90,17 +93,17 @@
     <!-- Graphics APIs -->
     <Service Name="ANGLEGraphics">
       <RemoveDefine>DIRECTX;WINDOWS_MEDIA_SESSION;WINDOWS;MONOMAC;LINUX</RemoveDefine>
-      <AddDefine>OPENGL;OPENAL;GLES;ANGLE</AddDefine>
+      <AddDefine>OPENGL;GLES;ANGLE</AddDefine>
       <Platforms>Windows,MacOS,Linux,Angle</Platforms>
       <Conflicts>OpenGLGraphics,DirectXGraphics,WebGraphics</Conflicts>
       <Requires>OpenALAudio,_GLCompatible</Requires>
     </Service>
     <Service Name="OpenGLGraphics">
       <RemoveDefine>DIRECTX;WINDOWS_MEDIA_SESSION</RemoveDefine>
-      <AddDefine>OPENGL;OPENAL</AddDefine>
+      <AddDefine>OPENGL</AddDefine>
       <Platforms>iOS,MacOS,Linux,Windows,WindowsGL,Ouya,Android</Platforms>
       <Conflicts>ANGLEGraphics,DirectXGraphics,WebGraphics</Conflicts>
-      <Requires>OpenALAudio,_GLCompatible</Requires>
+      <Requires>_GLCompatible</Requires>
     </Service>
     <Service Name="DirectXGraphics">
       <Platforms>Windows,Windows8,WindowsPhone,WindowsPhone81,WindowsUAP</Platforms>
@@ -115,16 +118,22 @@
 
     <!-- Audio APIs -->
     <Service Name="OpenALAudio">
-      <Platforms>Angle,iOS,Linux,Windows,WindowsGL,MacOS,Android,Ouya</Platforms>
-      <Conflicts>XAudioAudio,WebAudio</Conflicts>
+	  <AddDefine>OPENAL</AddDefine>
+      <Platforms>Angle,iOS,Linux,Windows,WindowsGL,MacOS</Platforms>
+      <Conflicts>XAudioAudio,WebAudio.ManagedAudio</Conflicts>
     </Service>
     <Service Name="XAudioAudio">
       <Platforms>Windows,Windows8,WindowsPhone,WindowsPhone81,WindowsUAP</Platforms>
-      <Conflicts>OpenALAudio,WebAudio</Conflicts>
+      <Conflicts>OpenALAudio,WebAudio,ManagedAudio</Conflicts>
     </Service>
     <Service Name="WebAudio">
       <Platforms>Web</Platforms>
-      <Conflicts>OpenALAudio,XAudioAudio</Conflicts>
+      <Conflicts>OpenALAudio,XAudioAudio,ManagedAudio</Conflicts>
+    </Service>
+    <Service Name="ManagedAudio">
+	  <AddDefine>AUDIOMIXER</AddDefine>
+      <Platforms>Android,Ouya</Platforms>
+      <Conflicts>OpenALAudio,XAudioAudio,WebAudio</Conflicts>
     </Service>
 
     <!-- Base supporting features -->
@@ -154,19 +163,6 @@
       <Link>OpenTK.dll.config</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-
-    <EmbeddedNativeLibrary Include="..\ThirdParty\Dependencies\openal-soft\libs\armeabi-v7a\libopenal32.so">
-      <Platforms>Android,Ouya</Platforms>
-      <Link>libs\armeabi-v7a\libopenal32.so</Link>
-    </EmbeddedNativeLibrary>
-    <EmbeddedNativeLibrary Include="..\ThirdParty\Dependencies\openal-soft\libs\armeabi\libopenal32.so">
-      <Platforms>Android,Ouya</Platforms>
-      <Link>libs\armeabi\libopenal32.so</Link>
-    </EmbeddedNativeLibrary>
-    <EmbeddedNativeLibrary Include="..\ThirdParty\Dependencies\openal-soft\libs\x86\libopenal32.so">
-      <Platforms>Android,Ouya</Platforms>
-      <Link>libs\x86\libopenal32.so</Link>
-    </EmbeddedNativeLibrary>
 
     <!-- Microsoft.Xna.Framework -->
     <Compile Include="BoundingBox.cs" />
@@ -247,7 +243,17 @@
     <Compile Include="Audio\AudioLoader.cs">
       <Platforms>Linux,WindowsGL,Angle,Android,Ouya</Platforms>
     </Compile>
+    <Compile Include="Audio\ImaAdpcm.cs">
+      <Services>ManagedAudio</Services>
+    </Compile>
     <Compile Include="Audio\InstancePlayLimitException.cs" />
+    <Compile Include="Audio\Mixer.cs">
+      <Services>ManagedAudio</Services>
+    </Compile>
+    <Compile Include="Audio\Mixer.Android.cs">
+      <Services>ManagedAudio</Services>
+      <Platforms>Android,Ouya</Platforms>
+    </Compile>
     <Compile Include="Audio\MSADPCMToPCM.cs">
       <Platforms>Android,Angle,iOS,Linux,MacOS,Ouya,WindowsGL,Web</Platforms>
     </Compile>
@@ -271,6 +277,9 @@
     <Compile Include="Audio\SoundEffect.Web.cs">
       <Services>WebAudio</Services>
     </Compile>
+    <Compile Include="Audio\SoundEffect.Mixer.cs">
+      <Services>ManagedAudio</Services>
+    </Compile>
     <Compile Include="Audio\SoundEffectInstance.cs" />
     <Compile Include="Audio\SoundEffectInstance.OpenAL.cs">
       <Services>OpenALAudio</Services>
@@ -280,6 +289,9 @@
     </Compile>
     <Compile Include="Audio\SoundEffectInstance.Web.cs">
       <Services>WebAudio</Services>
+    </Compile>
+    <Compile Include="Audio\SoundEffectInstance.Mixer.cs">
+      <Services>ManagedAudio</Services>
     </Compile>
     <Compile Include="Audio\SoundEffectInstancePool.cs" />
     <Compile Include="Audio\SoundState.cs" />
@@ -955,6 +967,9 @@
       <Platforms>WindowsGL,Linux</Platforms>
     </Compile>
     <Compile Include="Utilities\FileHelpers.cs" />
+    <Compile Include="Utilities\Fix64.cs">
+      <Services>ManagedAudio</Services>
+	</Compile>
     <Compile Include="Utilities\ReflectionHelpers.cs" />
     <Compile Include="Utilities\Lz4Stream\Lz4DecoderStream.cs" />
     <Compile Include="Utilities\ZLibStream\ZlibStream.cs" />

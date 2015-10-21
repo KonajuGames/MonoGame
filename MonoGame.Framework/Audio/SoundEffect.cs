@@ -37,6 +37,13 @@ namespace Microsoft.Xna.Framework.Audio
         /// <param name="channels">Number of channels (mono or stereo).</param>
         public SoundEffect(byte[] buffer, int sampleRate, AudioChannels channels)
         {
+            if (sampleRate < 8000 || sampleRate > 48000)
+                throw new ArgumentOutOfRangeException("sampleRate", "sampleRate must be between 8000 and 48000 Hz");
+            if ((int)channels < 1 || (int)channels > 2)
+                throw new ArgumentOutOfRangeException("channels", "channels must be AudioChannels.Mono(1) or AudioChannels.Stereo(2)");
+            if (buffer == null || buffer.Length == 0)
+                throw new ArgumentException("buffer cannot be null or zero length", "buffer");
+
             _duration = GetSampleDuration(buffer.Length, sampleRate, channels);
 
             PlatformInitialize(buffer, sampleRate, channels);
@@ -52,6 +59,32 @@ namespace Microsoft.Xna.Framework.Audio
         /// <remarks>Use SoundEffect.GetSampleDuration() to convert time to samples.</remarks>
         public SoundEffect(byte[] buffer, int offset, int count, int sampleRate, AudioChannels channels, int loopStart, int loopLength)
         {
+            if (sampleRate < 8000 || sampleRate > 48000)
+                throw new ArgumentOutOfRangeException("sampleRate", "sampleRate must be between 8000 and 48000 Hz");
+            if ((int)channels < 1 || (int)channels > 2)
+                throw new ArgumentOutOfRangeException("channels", "channels must be AudioChannels.Mono(1) or AudioChannels.Stereo(2)");
+            int alignment = channels == AudioChannels.Mono ? 2 : 4;
+            if (buffer == null || buffer.Length == 0)
+                throw new ArgumentException("buffer cannot be null or zero length", "buffer");
+            if (offset < 0)
+                throw new ArgumentException("offset cannot be less than zero", "offset");
+            if (offset >= buffer.Length)
+                throw new ArgumentException("offset cannot be greater than the buffer size", "offset");
+            if ((offset & (alignment - 1)) != 0)
+                throw new ArgumentException("offset must be a multiple of two of mono or four for stereo", "offset");
+            if (offset + count > buffer.Length)
+                throw new ArgumentException("The sum of count and offset cannot be greater than the buffer length", "offset+count");
+            if (count <= 0)
+                throw new ArgumentException("count cannot be less than or equal to zero", "count");
+            if ((count & (alignment - 1)) != 0)
+                throw new ArgumentException("count must be a multiple of two for mono or four for stereo", "count");
+            if (loopStart < 0)
+                throw new ArgumentException("loopStart cannot be less than zero", "loopStart");
+            if (loopLength < 0)
+                throw new ArgumentException("loopLength cannot be less than zero", "loopLength");
+            if (loopStart + loopLength > buffer.Length / alignment)
+                throw new ArgumentException("loopStart plus loopLength cannot be greater than the sample size", "loopStart+loopLength");
+
             _duration = GetSampleDuration(count, sampleRate, channels);
 
             PlatformInitialize(buffer, offset, count, sampleRate, channels, loopStart, loopLength);
