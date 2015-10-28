@@ -27,7 +27,7 @@ namespace Microsoft.Xna.Framework.Audio
         {
             get
             {
-                return PlatformNativeSampleRate;
+                return PlatformSampleRate;
             }
         }
 
@@ -560,122 +560,131 @@ namespace Microsoft.Xna.Framework.Audio
         {
             float compressor = 0.5f;
             PlatformStart();
-            var bufferSize = PlatformBufferSizeInShorts;
-            var nativeSampleRate = PlatformNativeSampleRate;
-            // A frame is a pair of left and right channel samples
-            var bufferFrames = bufferSize / 2;
-            var buffer0 = new short[bufferSize];
-            var buffer1 = new short[bufferSize];
-            var currentBuffer = buffer1;
+
+            var bufferFrames = PlatformBufferSizeInFrames;
+            var nativeSampleRate = PlatformSampleRate;
+            var updateBuffers = PlatformUpdateBuffers;
+
+            var bufferSize = bufferFrames * 2;
+            var buffers = new short[updateBuffers][];
+            for (var i = 0; i < updateBuffers; ++i)
+                buffers[i] = new short[bufferSize];
+            int index = 1 % updateBuffers;
+            var currentBuffer = buffers[index];
             var workBuffer = new float[bufferSize];
             var copyBuffer = new float[bufferSize];
-            int index = 1;
-            Array.Clear(buffer0, 0, bufferSize);
-            PlatformSubmitBuffer(buffer0);
+            Array.Clear(buffers[0], 0, bufferSize);
+            PlatformSubmitBuffer(buffers[0]);
             while (!_mixerCancellationTokenSource.Token.IsCancellationRequested)
             {
                 Array.Clear(workBuffer, 0, bufferSize);
+                //Android.Util.Log.Debug("Mixer", "Feeding the buffer. {0} playing instances", _playingInstances.Count);
+                // Iterate backwards so we can remove instances if they finish
+                int i;
                 lock (_playingInstances)
+                    i = _playingInstances.Count - 1;
+                while (i >= 0)
                 {
-                    //Android.Util.Log.Debug("Mixer", "Feeding the buffer. {0} playing instances", _playingInstances.Count);
-                    // Iterate backwards so we can remove instances if they finish
-                    for (int i = _playingInstances.Count - 1; i >= 0; --i)
+                    var wbi = 0;
+                    SoundEffectInstance inst;
+                    lock (_playingInstances)
+                        inst = _playingInstances[i];
+                    if (!inst.IsDisposed && !inst._effect.IsDisposed)
                     {
-                        var wbi = 0;
-                        var inst = _playingInstances[i];
-                        if (!inst.IsDisposed && !inst._effect.IsDisposed)
+                        var pan = inst.Pan;
+                        var volume = inst.Volume * compressor;
+                        var leftVolume = (pan > 0.0f ? 1.0f - pan : 1.0f) * volume;
+                        var rightVolume = (pan < 0.0f ? 1.0f + pan : 1.0f) * volume;
+                        switch (inst.State)
                         {
-                            var pan = inst.Pan;
-                            var volume = inst.Volume * compressor;
-                            var leftVolume = (pan > 0.0f ? 1.0f - pan : 1.0f) * volume;
-                            var rightVolume = (pan < 0.0f ? 1.0f + pan : 1.0f) * volume;
-                            switch (inst.State)
-                            {
-                                case SoundState.Playing:
+                            case SoundState.Playing:
+                                {
+                                    try
                                     {
-                                        try
+                                        int frames = 0;
+                                        if (inst._effect._channels == AudioChannels.Mono)
                                         {
-                                            int frames = 0;
-                                            if (inst._effect._channels == AudioChannels.Mono)
-                                            {
-                                                // Mono samples
-                                                if (inst._step == Fix64.One)
-                                                    frames = CopyMono(inst, copyBuffer);
-                                                else
-                                                    frames = ResampleMono(inst, copyBuffer);
-                                            }
+                                            // Mono samples
+                                            if (inst._step == Fix64.One)
+                                                frames = CopyMono(inst, copyBuffer);
                                             else
+                                                frames = ResampleMono(inst, copyBuffer);
+                                        }
+                                        else
+                                        {
+                                            // Stereo samples
+                                            if (inst._step == Fix64.One)
+                                                frames = CopyStereo(inst, copyBuffer);
+                                            else
+                                                frames = ResampleStereo(inst, copyBuffer);
+                                        }
+                                        if (frames > 0)
+                                        {
+                                            var data = inst._effect._data;
+                                            for (int s = 0; s < frames; ++s)
                                             {
-                                                // Stereo samples
-                                                if (inst._step == Fix64.One)
-                                                    frames = CopyStereo(inst, copyBuffer);
-                                                else
-                                                    frames = ResampleStereo(inst, copyBuffer);
-                                            }
-                                            if (frames > 0)
-                                            {
-                                                var data = inst._effect._data;
-                                                for (int s = 0; s < frames; ++s)
-                                                {
-                                                    workBuffer[wbi++] += copyBuffer[s << 1] * leftVolume;
-                                                    workBuffer[wbi++] += copyBuffer[(s << 1) + 1] * rightVolume;
-                                                }
-                                            }
-                                            if (frames < bufferFrames)
-                                            {
-                                                //Android.Util.Log.Debug("Mixer", "Instance {0} finished ({1})", inst._effect.Name, inst._id);
-                                                inst.Stop(true);
+                                                workBuffer[wbi++] += copyBuffer[s << 1] * leftVolume;
+                                                workBuffer[wbi++] += copyBuffer[(s << 1) + 1] * rightVolume;
                                             }
                                         }
-                                        catch
+                                        if (frames < bufferFrames)
                                         {
-                                            // If there was any unhandled exception thrown during the mix, immediately stop the instance so it gets cleaned up next update
+                                            //Android.Util.Log.Debug("Mixer", "Instance {0} finished ({1})", inst._effect.Name, inst._id);
                                             inst.Stop(true);
                                         }
                                     }
-                                    break;
-                                case SoundState.Stopped:
-                                    //Android.Util.Log.Debug("Mixer", "Instance {0} stopped ({1})", inst._effect.Name, inst._id);
-                                    // Instance has finished, so remove it
-                                    _playingInstances.RemoveAt(i);
-                                    // Auto-created instances are returned to a pool for use again later
-                                    if (inst._isPooled)
+                                    catch
                                     {
-                                        lock (_pooledInstances)
-                                            _pooledInstances.Add(inst);
+                                        // If there was any unhandled exception thrown during the mix, immediately stop the instance so it gets cleaned up next update
+                                        inst.Stop(true);
                                     }
-                                    break;
-                            }
-                        }
-                        else
-                        {
-                            // The instance or its effect has been disposed, so remove it
-                            _playingInstances.RemoveAt(i);
-                            if (!inst.IsDisposed)
-                            {
-                                if (inst._effect.IsDisposed)
-                                {
-                                    // Pooled instances are returned to the pool. Created instances are disposed.
-                                    if (inst._isPooled)
-                                    {
-                                        lock (_pooledInstances)
-                                            _pooledInstances.Add(inst);
-                                    }
-                                    else
-                                        inst.Dispose();
                                 }
+                                break;
+                            case SoundState.Stopped:
+                                //Android.Util.Log.Debug("Mixer", "Instance {0} stopped ({1})", inst._effect.Name, inst._id);
+                                // Instance has finished, so remove it
+                                lock (_playingInstances)
+                                    _playingInstances.RemoveAt(i);
+                                // Auto-created instances are returned to a pool for use again later
+                                if (inst._isPooled)
+                                {
+                                    lock (_pooledInstances)
+                                        _pooledInstances.Add(inst);
+                                }
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        // The instance or its effect has been disposed, so remove it
+                        lock (_playingInstances)
+                            _playingInstances.RemoveAt(i);
+                        if (!inst.IsDisposed)
+                        {
+                            if (inst._effect.IsDisposed)
+                            {
+                                // Pooled instances are returned to the pool. Created instances are disposed.
+                                if (inst._isPooled)
+                                {
+                                    lock (_pooledInstances)
+                                        _pooledInstances.Add(inst);
+                                }
+                                else
+                                    inst.Dispose();
                             }
                         }
                     }
+                    --i;
                 }
+
                 // Copy from work buffer to 16-bit signed buffer
-                for (int i = 0; i < workBuffer.Length; ++i)
-                    currentBuffer[i] = (short)workBuffer[i];
+                for (int j = 0; j < workBuffer.Length; ++j)
+                    currentBuffer[j] = (short)workBuffer[j];
                 // Submit the buffer to the audio stream
                 PlatformSubmitBuffer(currentBuffer);
                 // Swap to the other working buffer
-                index = 1 - index;
-                currentBuffer = index == 0 ? buffer0 : buffer1;
+                index = (index + 1) % updateBuffers;
+                currentBuffer = buffers[index];
             }
             PlatformStop();
         }

@@ -4,6 +4,9 @@
 
 using System;
 using Android.Media;
+using Android.Content.PM;
+using Android.Content;
+using System.Globalization;
 
 namespace Microsoft.Xna.Framework.Audio
 {
@@ -14,11 +17,13 @@ namespace Microsoft.Xna.Framework.Audio
     {
         static AudioTrack _audioTrack;
 
-        static int _bufferSizeInShorts;
-        static int _nativeSampleRate;
+        static int _bufferSizeInFrames;
+        static int _sampleRate;
+        static int _updateBuffers;
 
-        static int PlatformBufferSizeInShorts { get { return _bufferSizeInShorts; } }
-        static int PlatformNativeSampleRate { get { return _nativeSampleRate; } }
+        static int PlatformBufferSizeInFrames { get { return _bufferSizeInFrames; } }
+        static int PlatformSampleRate { get { return _sampleRate; } }
+        static int PlatformUpdateBuffers { get { return _updateBuffers; } }
 
         static void PlatformInit()
         {
@@ -47,11 +52,33 @@ namespace Microsoft.Xna.Framework.Audio
         /// </summary>
         static void PlatformStart()
         {
-            _nativeSampleRate = AudioTrack.GetNativeOutputSampleRate(Android.Media.Stream.Music);
-            var bufferSizeInBytes = AudioTrack.GetMinBufferSize(_nativeSampleRate, ChannelOut.Stereo, Encoding.Pcm16bit);
-            _bufferSizeInShorts = bufferSizeInBytes / sizeof(short);
-            Android.Util.Log.Debug("Mixer", "Mixer starting with buffer of {0} stereo samples. Native sample rate {1}", _bufferSizeInShorts, _nativeSampleRate);
-            _audioTrack = new AudioTrack(Android.Media.Stream.Music, _nativeSampleRate, ChannelOut.Stereo, Encoding.Pcm16bit, bufferSizeInBytes, AudioTrackMode.Stream);
+            _sampleRate = 44100;
+            _bufferSizeInFrames = 4096;
+            _updateBuffers = 2;
+            if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.JellyBeanMr1)
+            {
+                Android.Util.Log.Debug("Mixer", Game.Activity.PackageManager.HasSystemFeature(PackageManager.FeatureAudioLowLatency) ? "Supports low latency audio playback." : "Does not support low latency audio playback.");
+                var audioManager = Game.Activity.GetSystemService(Context.AudioService) as AudioManager;
+                if (audioManager != null)
+                {
+                    var result = audioManager.GetProperty(AudioManager.PropertyOutputSampleRate);
+                    if (!string.IsNullOrEmpty(result))
+                        _sampleRate = int.Parse(result, CultureInfo.InvariantCulture);
+                    result = audioManager.GetProperty(AudioManager.PropertyOutputFramesPerBuffer);
+                    if (!string.IsNullOrEmpty(result))
+                        _bufferSizeInFrames = int.Parse(result, CultureInfo.InvariantCulture);
+                }
+
+                // If 4.4 or higher, then we don't need to double buffer on the application side.
+                // See http://stackoverflow.com/a/15006327
+                if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.Kitkat)
+                    _updateBuffers = 1;
+
+            }
+
+            var bufferSizeInBytes = _bufferSizeInFrames * sizeof(short) * 2;
+            Android.Util.Log.Debug("Mixer", "Mixer starting with buffer of {0} stereo samples. Native sample rate {1}", _bufferSizeInFrames, _sampleRate);
+            _audioTrack = new AudioTrack(Android.Media.Stream.Music, _sampleRate, ChannelOut.Stereo, Encoding.Pcm16bit, bufferSizeInBytes, AudioTrackMode.Stream);
             _audioTrack.Play();
         }
 
