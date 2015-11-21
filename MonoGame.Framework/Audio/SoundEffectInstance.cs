@@ -20,9 +20,9 @@ namespace Microsoft.Xna.Framework.Audio
         private float _volume;
         private float _pitch;
 
-        /// <summary>Enables or Disables whether the SoundEffectInstance should repeat after playback.</summary>
+        /// <summary>Enables or disables whether the SoundEffectInstance should repeat after playback.</summary>
         /// <remarks>This value has no effect on an already playing sound.</remarks>
-        public bool IsLooped
+        public virtual bool IsLooped
         { 
             get { return PlatformGetIsLooped(); }
             set { PlatformSetIsLooped(value); }

@@ -91,7 +91,8 @@ namespace Microsoft.Xna.Framework.Audio
 
         private void PlatformSetPitch(float value)
         {
-            _step = CalculateStep();
+            if (_effect != null)
+                _step = CalculateStep();
         }
 
         private SoundState PlatformGetState()

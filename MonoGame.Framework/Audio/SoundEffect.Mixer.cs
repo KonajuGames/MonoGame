@@ -49,6 +49,9 @@ namespace Microsoft.Xna.Framework.Audio
         {
             instance._position = Fix64.Zero;
             instance._state = SoundState.Stopped;
+            instance.Pan = 0.0f;
+            instance.Pitch = 0.0f;
+            instance.Volume = 1.0f;
         }
 
         private void PlatformDispose(bool disposing)
