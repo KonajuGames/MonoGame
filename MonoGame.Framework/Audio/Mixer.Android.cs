@@ -53,7 +53,8 @@ namespace Microsoft.Xna.Framework.Audio
         static void PlatformStart()
         {
             _sampleRate = 44100;
-            _bufferSizeInFrames = 4096;
+            // Use a small default buffer size to prevent too much latency in sound playback
+            _bufferSizeInFrames = 256;
             _updateBuffers = 2;
             if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.JellyBeanMr1)
             {
