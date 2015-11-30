@@ -15,7 +15,7 @@ namespace Microsoft.Xna.Framework.Audio
     /// </summary>
     static partial class Mixer
     {
-        static Task _mixerTask;
+        static Thread _mixerThread;
         static CancellationTokenSource _mixerCancellationTokenSource;
         static List<SoundEffectInstance> _playingInstances;
         static List<SoundEffectInstance> _pooledInstances;
@@ -83,7 +83,8 @@ namespace Microsoft.Xna.Framework.Audio
             {
                 _mixerCancellationTokenSource = new CancellationTokenSource();
                 // Start the mixer thread
-                _mixerTask = Task.Factory.StartNew(MixerTask, _mixerCancellationTokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+                _mixerThread = new Thread(MixerTask);
+                _mixerThread.Start();
             }
         }
 
@@ -97,11 +98,11 @@ namespace Microsoft.Xna.Framework.Audio
                 // Ask the mixer thread to stop
                 _mixerCancellationTokenSource.Cancel();
                 // Wait for the thread to stop
-                _mixerTask.Wait();
+                _mixerThread.Join();
                 // Cleanup
                 _mixerCancellationTokenSource.Dispose();
                 _mixerCancellationTokenSource = null;
-                _mixerTask = null;
+                _mixerThread = null;
             }
         }
 

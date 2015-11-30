@@ -52,6 +52,7 @@ namespace Microsoft.Xna.Framework.Audio
         /// </summary>
         static void PlatformStart()
         {
+            Android.OS.Process.SetThreadPriority(Android.OS.ThreadPriority.UrgentAudio);
             _sampleRate = 44100;
             // Use a small default buffer size to prevent too much latency in sound playback
             _bufferSizeInFrames = 256;
