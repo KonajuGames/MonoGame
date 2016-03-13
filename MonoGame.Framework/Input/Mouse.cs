@@ -140,9 +140,12 @@ namespace Microsoft.Xna.Framework.Input
 #elif DESKTOPGL || ANGLE
 
             var state = OpenTK.Input.Mouse.GetCursorState();
-            
-            window.MouseState.X = state.X;
-            window.MouseState.Y = state.Y;
+
+            // GetCursorState reports mouse position in screen coordinates, so we need to subtract the client top/left
+            // to get the mouse position in window client coordinates.
+            var clientBounds = window.ClientBounds;
+            window.MouseState.X = state.X - clientBounds.X;
+            window.MouseState.Y = state.Y - clientBounds.Y;
 
             window.MouseState.LeftButton = (ButtonState)state.LeftButton;
             window.MouseState.RightButton = (ButtonState)state.RightButton;
